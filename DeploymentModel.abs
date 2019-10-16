@@ -48,25 +48,41 @@ class OpenClient (SE ep, Int cycle, Rat cost, Int nbrOfJobs, Counter c) implemen
     }
 }
 
+interface Database {
+  Unit read();
+  Unit write();
+}
+
+class Database(Int transactionCost) implements Database {
+  Unit read() {
+    [Cost: transactionCost] skip;
+  }
+
+  Unit write() {
+    [Cost: transactionCost * 2] skip;
+  }
+}
+
 // Abstraction of the backend system
 interface Service {
     Bool register(Duration deadline, Time calltime, Int customerId);
 }
 
-class Service(Int registerCost) implements Service {
+class Service(Database db, Int registerCost) implements Service {
     Bool register(Duration deadline, Time calltime, Int customerId) {
         println("[Registering customer: " + toString(customerId) + ", time: " +toString(timeValue(now()))+"] Service processing job, available time is "+toString(deadline));
-        Int cost = registerCost;
-            
-        while (cost > 0) {
-            [Cost: 1 ] cost = cost -1; suspend;}
-            Rat remainingTime = timeDifference(calltime,now());
-            println("[Time: "+toString(timeValue(now()))+"] Registered the customer " + toString(customerId));
-            if ((durationValue(deadline) - remainingTime) > 0){
-                println("[Time: "+toString(timeValue(now()))+"] The registration succeeded on time! [customer: " + toString(customerId) + "]");
-            } else {
-                println("[Time: "+toString(timeValue(now()))+"] The registration violated deadline! [customer: " + toString(customerId) + "]");
-        }    
+
+        await db!read();
+        [Cost: registerCost] skip;
+        await db!write();
+
+        Rat remainingTime = timeDifference(calltime,now());
+        println("[Time: "+toString(timeValue(now()))+"] Registered the customer " + toString(customerId));
+        if ((durationValue(deadline) - remainingTime) > 0) {
+            println("[Time: "+toString(timeValue(now()))+"] The registration succeeded on time! [customer: " + toString(customerId) + "]");
+        } else {
+            println("[Time: "+toString(timeValue(now()))+"] The registration violated deadline! [customer: " + toString(customerId) + "]");
+        }
         return (durationValue(deadline) - remainingTime) > 0;
     }
 }
@@ -185,19 +201,13 @@ class RoundRobinLoadBalancer(Counter counter, Int jobCount) implements LoadBalan
   interface Autoscaler {}
 
 
-class Autoscaler(CloudProvider cloud, LoadBalancer lb, Int nbrOfWorkers, Int maxWorkers, Int nResources, Int cycle, Int taskCost, Counter c)
+class Autoscaler(CloudProvider cloud, LoadBalancer lb, Int nbrOfWorkers, Int maxWorkers, Int nResources, Int cycle, Int taskCost, Int dbTransactionCost, Counter c)
 implements Autoscaler {
   Unit run(){
     [Cost: 1] skip;
     Int ctr = 0;
     while (ctr < nbrOfWorkers) {
-        Fut<DC> fs =  cloud!launchInstance(map[Pair(Speed, nResources)]);
-        DC vm = fs.get;
-        [DC: vm] Service service = new Service(taskCost);
-        [DC: vm] Worker w = new Worker(service, ctr + 1);
-        lb!addWorker(w);
-        Time startTime = await vm!getCreationTime();
-        await c!addMachine(vm,startTime);
+        await this!createInstance(ctr + 1);
         ctr=ctr+1;
       }
       println("[Time: "+toString(timeValue(now()))+"] ***********INIT: CREATED "+toString(nbrOfWorkers)+" WORKERS");
@@ -217,13 +227,7 @@ implements Autoscaler {
             ctr = 0;
             Rat extraworkers= inuse;
             while (ctr<extraworkers ) {
-                Fut<DC> fs =  cloud!launchInstance(map[Pair(Speed, nResources)]);
-                DC vm = fs.get;
-                [DC: vm] Service service = new Service(taskCost);
-                [DC: vm] Worker w = new Worker(service, ctr + 1);
-                await lb!addWorker(w);
-                Time startTime = await vm!getCreationTime();
-                await c!addMachine(vm,startTime);
+                await this!createInstance(ctr + 1);
                 ctr=ctr+1;
             }
         }
@@ -244,6 +248,17 @@ implements Autoscaler {
         if (lbFinished != True) {
             this!resize();     
         }
+    }
+
+    Unit createInstance(Int instanceId) {
+      Fut<DC> fs =  cloud!launchInstance(map[Pair(Speed, nResources)]);
+      DC vm = fs.get;
+      [DC: vm] Database db = new Database(dbTransactionCost);
+      [DC: vm] Service service = new Service(db, taskCost);
+      [DC: vm] Worker w = new Worker(service, instanceId);
+      await lb!addWorker(w);
+      Time startTime = await vm!getCreationTime();
+      await c!addMachine(vm,startTime);
     }
  }
 
@@ -346,6 +361,7 @@ interface Counter {
     Int clientsCount = 200;
     Int clientJobsCount = 1;
     Int taskCost = 10;
+    Int dbTransactionCost = 1;
     Int workerSpeed = 40;
     Int autoScaleInterval = 2;
     Duration deadline = Duration(10);
@@ -360,7 +376,7 @@ interface Counter {
     // Deploy the system
     Counter counter = new Counter();
     [DC: frontendServer] LoadBalancer lb = new RoundRobinLoadBalancer(counter, clientsCount * clientJobsCount);
-    [DC: frontendServer] Autoscaler autoScaler = new Autoscaler(cloud, lb, workersCount, maxWorkersCount, workerSpeed, autoScaleInterval, taskCost, counter);
+    [DC: frontendServer] Autoscaler autoScaler = new Autoscaler(cloud, lb, workersCount, maxWorkersCount, workerSpeed, autoScaleInterval, taskCost, dbTransactionCost, counter);
     [DC: frontendServer] SE endpoint = new ServiceEndpoint(lb, deadline);
 
     // Start up clients
