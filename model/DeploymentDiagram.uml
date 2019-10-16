@@ -1,0 +1,33 @@
+@startuml
+cloud Cloud {
+    node FrontendServer {
+        component LoadBalancer
+        component Autoscaler
+        component Endpoint
+    }
+    node VirtualMachine {
+        component Worker
+        component Service
+        database Database
+    }
+
+    FrontendServer -(0- VirtualMachine
+    FrontendServer --> VirtualMachine: "Scales (many) virtual machines"
+    Worker --> Service: "Jobs"
+    Service --> Database: "Transactions"
+}
+
+frame cl_1 [
+    Client 1
+]
+frame cl_2 [
+    Client 2
+]
+frame cl_n [
+    Client N
+]
+
+cl_1 -(0- FrontendServer
+cl_2 -(0- FrontendServer
+cl_n -(0- FrontendServer
+@enduml

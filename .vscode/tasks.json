@@ -6,7 +6,7 @@
         {
             "label": "Build ABS",
             "type": "shell",
-            "command": "absc --erlang *.abs",
+            "command": "absc --erlang model/*.abs",
             "group": {
                 "kind": "build",
                 "isDefault": true
@@ -15,7 +15,7 @@
         {
             "label": "Run",
             "type": "shell",
-            "command": "gen/erl/run",
+            "command": "model/gen/erl/run",
             "group": {
                 "kind": "test",
                 "isDefault": true
