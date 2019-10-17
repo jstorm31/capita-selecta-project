@@ -14,29 +14,37 @@ interface Service {
 class Service(Database db, List<PaymentProvider> providers, Int cost) implements Service {
     PaymentProvider provider = nth(providers, random(2));
     TicketSystem ticketSystem;
+    Bool verbose = False;
 
     Unit run() {
         ticketSystem = new TicketSystem(db, provider, ceil(0.6 * float(cost)), cost, 400000);
     }
 
     Bool execute(Duration deadline, Time calltime) {
+        Time started = now();
+
         String customerId = toString(random(1000000));
         Int ticketCount = 1 + random(3);
         UserAuth user = UserAuth(customerId, "password");
         LoginRequest request = LoginRequest("token", user);
 
-        println("[Customer: " + toString(customerId) + "] Ordering " + toString(ticketCount) + "tickets | time: " +toString(timeValue(now()))+"] Service processing job, available time is "+toString(deadline));
+        if (verbose) {
+            println("[Customer: " + toString(customerId) + "] Ordering " + toString(ticketCount) + "tickets | time: " +toString(timeValue(now()))+"] Service processing job, available time is "+toString(deadline));
+        }
 
         await ticketSystem!login(request);
         OrderResponse response = await ticketSystem!order(ticketCount);
 
         Rat remainingTime = timeDifference(calltime,now());
-        println("[Time: "+toString(timeValue(now()))+"] Registered the customer " + toString(customerId));
-        if ((durationValue(deadline) - remainingTime) > 0) {
-            println("[Time: "+toString(timeValue(now()))+"] The registration succeeded on time! [customer: " + toString(customerId) + "]");
-        } else {
-            println("[Time: "+toString(timeValue(now()))+"] The registration violated deadline! [customer: " + toString(customerId) + "]");
+        if (verbose) {
+            println("[Time: "+toString(timeValue(now()))+"] Registered the customer " + toString(customerId));
+            if ((durationValue(deadline) - remainingTime) > 0) {
+                println("[Time: "+toString(timeValue(now()))+"] The registration succeeded on time! [customer: " + toString(customerId) + "]");
+            } else {
+                println("[Time: "+toString(timeValue(now()))+"] The registration violated deadline! [customer: " + toString(customerId) + "]");
+            }
         }
+
         return (durationValue(deadline) - remainingTime) > 0;
     }
 }

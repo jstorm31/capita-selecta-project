@@ -30,7 +30,7 @@ class Simulation(Parameters parameters, Duration clientDeadline) implements Simu
         Int dbTransactionCost = fromJust(lookup(parameters, "dbTransactionCost"));
         Int workerSpeed = fromJust(lookup(parameters, "workerSpeed"));
         Int autoScaleInterval = fromJust(lookup(parameters, "autoScaleInterval"));
-        Int vendorResponse = fromJust(lookup(parameters, "vendorResponse"));
+        Int vendorSpeed = fromJust(lookup(parameters, "vendorSpeed"));
 
         // Create cloud providers
         CloudProvider cloud = new CloudProvider("Cloud");
@@ -45,12 +45,12 @@ class Simulation(Parameters parameters, Duration clientDeadline) implements Simu
         DC paymentServer2 = await vendorCloud2!launchInstance(map[Pair(Speed, workerSpeed * maxWorkersCount)]);
         DC paymentServer3 = await vendorCloud3!launchInstance(map[Pair(Speed, workerSpeed * maxWorkersCount)]);
 
-        Counter counter = new Counter();
+        Counter counter = new Counter(clientsCount);
 
         // Vendors
-        [DC: paymentServer1] PaymentProvider prov1 = new PaymentProvider(Visa, vendorResponse + random(2));
-        [DC: paymentServer2] PaymentProvider prov2 = new PaymentProvider(MasterCard, vendorResponse + random(2));
-        [DC: paymentServer3] PaymentProvider prov3 = new PaymentProvider(Maestro, vendorResponse + random(2));
+        [DC: paymentServer1] PaymentProvider prov1 = new PaymentProvider(Visa, vendorSpeed + random(3));
+        [DC: paymentServer2] PaymentProvider prov2 = new PaymentProvider(MasterCard, vendorSpeed + random(3));
+        [DC: paymentServer3] PaymentProvider prov3 = new PaymentProvider(Maestro, vendorSpeed + random(3));
         List<PaymentProvider> providers = list[prov1, prov2, prov3];
 
         // Deploy the system
@@ -60,17 +60,25 @@ class Simulation(Parameters parameters, Duration clientDeadline) implements Simu
     
         println("\n========== Starting " + toString(clientsCount) + " clients... ==========");
 
-        // Start up clients
+        // Start up clients in batches
         Int runningClientsCount = clientsCount;
         Rat part = clientsCount / (10*clientsCount / 100);
         Int progress = 0;
+        Int batch = 500; // process x clients at a time
+
         while (runningClientsCount > 0) {
-            if (floor(float(runningClientsCount / part)) == 0) {
-                progress = progress + 10;
-                println("Started " + toString(progress) + "% of clients...");
+            Int currentBatch = 0;
+            await duration(rat(1.0), rat(1.0));
+
+            while (currentBatch < batch) {
+                if (floor(float(runningClientsCount / part)) == 0) {
+                    progress = progress + 10;
+                    println("Started " + toString(progress) + "% of clients...");
+                }
+                new OpenClient(endpoint, 1, taskCost, clientJobsCount, counter);
+                currentBatch = currentBatch + 1;
+                runningClientsCount = runningClientsCount - 1;
             }
-            new OpenClient(endpoint, 1, taskCost, clientJobsCount, counter);
-            runningClientsCount = runningClientsCount - 1;
         }
         println("========== Started 100% of clients ==========\n");
         lb.setClientsStarted(True);
@@ -81,17 +89,17 @@ class Simulation(Parameters parameters, Duration clientDeadline) implements Simu
 
 {
     Parameters parameters = map[
-        Pair("workersCount", 16),
-        Pair("maxWorkersCount", 64),
-        Pair("clientsCount", 600), // Amount of people trying to buy tickets (found on the internet) + reserve 20%
+        Pair("workersCount", 64),
+        Pair("maxWorkersCount", 128),
+        Pair("clientsCount", 1000), // Amount of people trying to buy tickets (found on the internet) + reserve 20%
         Pair("clientJobsCount", 1),
         Pair("taskCost", 10), // Estimated
         Pair("dbTransactionCost", 1),
-        Pair("workerSpeed", 500), // Number of requests handled per second by server (estimated for processor with 2 cores with 2GHz frequency)
+        Pair("workerSpeed", 2000), // Number of requests handled per second by server (estimated for processor with 2 cores with 2GHz frequency)
         Pair("autoScaleInterval", 2), // In time units
-        Pair("vendorResponse", 2) // In time units
+        Pair("vendorSpeed", 4) // In time units
     ];
-    Duration deadline = Duration(60); // 10 minutes for 6_000_000 clients is 1minute for 600_000 clients
+    Duration deadline = Duration(rat(1)); // 10 minutes for 6_000_000 clients is 1minute for 600_000 clients
 
     Simulation simulation = new Simulation(parameters, deadline);
     simulation.start();

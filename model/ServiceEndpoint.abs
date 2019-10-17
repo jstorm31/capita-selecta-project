@@ -13,7 +13,7 @@ class ServiceEndpoint(LoadBalancer lb, Duration responseTime) implements Service
       Time started = now();
       [Cost: 1] skip;
       Worker w =  await lb!getWorker();
-      Bool success = await w!process(cost,started,responseTime);
+      Bool success = await w!process(cost, started, responseTime);
       await lb!releaseWorker(w);
       // Returns success-handler to client:
       return success;

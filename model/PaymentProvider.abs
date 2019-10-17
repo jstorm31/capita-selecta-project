@@ -14,13 +14,12 @@ interface PaymentProvider {
 
 class PaymentProvider(PaymentProviderType brand, Int maxResponseTime) implements PaymentProvider {
     Float balance(PaymentCard card) {
-        await duration(maxResponseTime, maxResponseTime);
-        Float balance = float((random(10000) - random(1000)) / (1 + random(9))); // Generate random rational number
+        [Cost: maxResponseTime] Float balance = float((random(10000) - random(1000)) / (1 + random(9))); // Generate random rational number
         return balance;
     }    
 
     Unit pay(PaymentCard card) {
-        await duration(maxResponseTime, maxResponseTime);
+        [Cost: maxResponseTime] skip;
     }
 }
 

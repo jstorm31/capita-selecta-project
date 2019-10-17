@@ -46,23 +46,32 @@ def Map<A, B> mapTail<A, B>(Map<A, B> map) = // remove the head of the map
   
   }
   
-  class Counter() implements Counter {
+  class Counter(Int total) implements Counter {
     Int success = 0;
     Int fail = 0;
     Int cost = 0;
+    Int finished = 0;
   
     MachineUseLog machines = EmptyMap;
 
     Int getFinished() {
-        return success + fail;
+        return finished;
     }
     
-    Unit addSuccesses(Int amount) {success = success+amount;}
+    Unit addSuccesses(Int amount) {
+      success = success + amount;
+      finished = finished + amount;
+      this!printProgress();
+    }
   
-    Unit addFails(Int amount){fail = fail+amount;}
+    Unit addFails(Int amount) {
+      fail = fail+amount;
+      finished = finished + amount;
+      this!printProgress();
+    }
   
-    Unit printSuccess(){println("[Time: "+toString(timeValue(now()))+"] Total successes: "+ toString(success));}
-    Unit printFail(){println("[Time: "+toString(timeValue(now()))+"] Total Fails: "+ toString(fail));}
+    Unit printSuccess(){println("[Time: "+toString(timeValue(now()))+"] ✅ Total successes: "+ toString(success));}
+    Unit printFail(){println("[Time: "+toString(timeValue(now()))+"] ❌ Total Fails: "+ toString(fail));}
   
     Unit addMachine(DeploymentComponent id, Time startup){
       machines =  InsertAssoc(Pair(id,Pair(startup,Nothing)), machines);
@@ -76,6 +85,11 @@ def Map<A, B> mapTail<A, B>(Map<A, B> map) = // remove the head of the map
     Unit calculateCost(Int cost, Int interval,Time until){
       Rat calculatedCost = calcCost(machines, cost, interval, until);
       println("[Time: "+toString(timeValue(now()))+"] Total Cost on the cloud (until time " +toString(timeValue(now()))+ "):"+ toString(calculatedCost));
+    }
+
+    Unit printProgress() {
+      Int progress = floor(float((finished / total) * 100));
+      println("[Time: "+toString(timeValue(now())) + "] ⏱ Progress: " + toString(progress) + "%");
     }
   
     Unit printMachineUseLog(){

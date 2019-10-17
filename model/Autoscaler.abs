@@ -32,7 +32,7 @@ implements Autoscaler {
         Int available = await lb!getNbrAvailableW();
         Int inuse = await lb!getNbrInuseW();
 
-        println("========== [AUTOSCALE STATUS] Available: " + toString(available) + ", inuse: " + toString(inuse) + ", max: " + toString(maxWorkers));
+        println("[AUTOSCALE STATUS] 📈 Available: " + toString(available) + ", inuse: " + toString(inuse) + ", max: " + toString(maxWorkers));
       
         if (available < ((available+inuse)/4) && (available+inuse)<=maxWorkers/2) {
             ctr = 0;

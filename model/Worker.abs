@@ -11,11 +11,15 @@ interface Worker {
 }
 
 class Worker(Service service, Int id) implements Worker {
+  Bool verbose = False;
+
   Bool process(Rat taskCost, Time started, Duration deadline) {
-    println("[Time: "+toString(timeValue(now()))+"] Worker " + toString(this.id) + " has started processing a job");
+    if (verbose) {
+      println("[Time: "+toString(timeValue(now()))+"] Worker " + toString(this.id) + " has started processing a job");
+    }
+
     [Cost: taskCost] skip;                                  
     Duration remainingTime = subtractFromDuration(deadline, timeDifference(started,now()));
-    // When we receive more jobs, this becomes a bottleneck
     Bool success = await service!execute(remainingTime, now()); 
     return success;
   }
