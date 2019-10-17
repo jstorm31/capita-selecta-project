@@ -1,0 +1,25 @@
+module WorkerModule;
+
+export *;
+
+import * from ABS.DC;
+import * from ServiceModule;
+
+interface Worker {
+    Bool process(Rat taskCost,  Time started, Duration deadline);
+    DC getDC();
+}
+
+class Worker(Service service, Int id) implements Worker {
+  Bool process(Rat taskCost, Time started, Duration deadline) {
+    println("[Time: "+toString(timeValue(now()))+"] Worker " + toString(this.id) + " has started processing a job");
+    [Cost: taskCost] skip;                                  
+    Duration remainingTime = subtractFromDuration(deadline, timeDifference(started,now()));
+    // When we receive more jobs, this becomes a bottleneck
+    Bool success = await service!register(remainingTime, now(), random(1000000)); 
+    return success;
+  }
+  
+  DC getDC(){ return thisDC();}
+}
+

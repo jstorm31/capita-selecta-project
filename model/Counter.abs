@@ -1,0 +1,101 @@
+module CounterModule;
+
+export *;
+
+import * from ABS.DC;
+
+//************** For the accounting of the usage of resources**********************
+type MachineUseLog =  Map<DeploymentComponent,Pair<Time,Maybe<Time>>>;
+
+
+def Rat calcCost( MachineUseLog ml, Int cost, Int interval, Time now) =
+     case ml{
+       InsertAssoc(Pair(id, Pair(s,e)), mlt) => (costMachine(s,e,now)/interval)*cost + calcCost(mlt, cost, interval,now);
+	 EmptyMap => 0;
+       };
+
+def Rat costMachine(Time start ,Maybe<Time> end ,Time now) =
+case end {
+  Nothing => timeDifference(start, now);
+  Just(e) => timeDifference(start, e);
+};
+
+def Map<A, B> mapTail<A, B>(Map<A, B> map) = // remove the head of the map
+  case map {
+  	EmptyMap => map;
+    InsertAssoc(pair, tail) => tail;
+  };
+
+  def Pair<A, B> mapHead<A, B>(Map<A, B> map, Pair<A,B> default) = // remove the tail of the map
+  case map {
+    EmptyMap => default;
+    InsertAssoc(Pair(one,two), tail) => Pair(one,two);
+  };
+
+  interface Counter {
+    Int getFinished();
+
+    Unit addSuccesses(Int amount);
+    Unit addFails(Int amount);
+    Unit addMachine(DeploymentComponent id, Time startup);
+    Unit addShutdown(DeploymentComponent id, Time shutdown);
+    Unit printSuccess();
+    Unit printFail();
+    Unit calculateCost(Int cost, Int interval,Time until);
+    Unit printMachineUseLog();
+  
+  }
+  
+  class Counter() implements Counter {
+    Int success = 0;
+    Int fail = 0;
+    Int cost = 0;
+  
+    MachineUseLog machines = EmptyMap;
+
+    Int getFinished() {
+        return success + fail;
+    }
+    
+    Unit addSuccesses(Int amount) {success = success+amount;}
+  
+    Unit addFails(Int amount){fail = fail+amount;}
+  
+    Unit printSuccess(){println("[Time: "+toString(timeValue(now()))+"] Total successes: "+ toString(success));}
+    Unit printFail(){println("[Time: "+toString(timeValue(now()))+"] Total Fails: "+ toString(fail));}
+  
+    Unit addMachine(DeploymentComponent id, Time startup){
+      machines =  InsertAssoc(Pair(id,Pair(startup,Nothing)), machines);
+    }
+    Unit addShutdown(DeploymentComponent id, Time shutdown){
+      Pair<Time,Maybe<Time>> tmp = lookupDefault(machines, id,Pair(Time(-1),Nothing));
+      
+      machines = InsertAssoc(Pair(id, Pair(fst(tmp),Just(shutdown))), removeKey(machines, id));
+    }
+  
+    Unit calculateCost(Int cost, Int interval,Time until){
+      Rat calculatedCost = calcCost(machines, cost, interval, until);
+      println("[Time: "+toString(timeValue(now()))+"] Total Cost on the cloud (until time " +toString(timeValue(now()))+ "):"+ toString(calculatedCost));
+    }
+  
+    Unit printMachineUseLog(){
+        MachineUseLog tmp =  machines;
+        DeploymentComponent tdc = null;
+        while (tmp != EmptyMap) {	
+      Pair<DeploymentComponent,Pair<Time,Maybe<Time>>> head = mapHead(tmp,Pair(tdc,Pair(Time(-1),Nothing)));
+      DeploymentComponent dc = fst(head);
+      String name = await dc!getName();
+      Pair<Time,Maybe<Time>> tmptime = snd(head);
+      Time frmt = fst(tmptime);
+      Maybe<Time> tot = snd(tmptime);
+  
+       if  (tot != Nothing){
+         println("[Time: "+toString(timeValue(now()))+"]"+name+"->("+toString(timeValue(frmt))+","+toString(timeValue(fromJust(tot)))+")");
+       }else{
+         println("[Time: "+toString(timeValue(now()))+"]"+name+"->("+toString(timeValue(frmt))+",-)");
+        }
+       tmp = mapTail(tmp);	
+      }
+        }
+  
+  }

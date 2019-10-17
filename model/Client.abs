@@ -1,0 +1,24 @@
+module ClientModule;
+
+export *;
+
+import * from ABS.DC;
+import * from ServiceEndpointModule;
+import * from CounterModule;
+
+ // The clients
+interface Client {}
+
+// Client with asynchronous calls (i.e., floods the system)
+class OpenClient (ServiceEndpoint ep, Int cycle, Rat cost, Int nbrOfJobs, Counter c) implements Client {
+    Int jobcount = 0;
+    Unit run() { 
+        Fut<Bool> fresult =  ep!invokeService(cost);
+        jobcount = jobcount + 1;
+        await duration(cycle, cycle);
+        if (jobcount < nbrOfJobs) { this!run(); }
+        await fresult?; 
+        Bool result = fresult.get;
+        if (result == True)  {await c!addSuccesses(1);} else {await c!addFails(1);}
+    }
+}

@@ -1,0 +1,74 @@
+module AutoscalerModule;
+
+export *;
+
+import * from ABS.DC;
+import * from LoadBalancerModule;
+import * from WorkerModule;
+import * from ServiceModule;
+import * from DatabaseModule;
+import * from CounterModule;
+
+
+interface Autoscaler {}
+
+class Autoscaler(CloudProvider cloud, LoadBalancer lb, Int nbrOfWorkers, Int maxWorkers, Int nResources, Int cycle, Int taskCost, Int dbTransactionCost, Counter c)
+implements Autoscaler {
+  Unit run(){
+    [Cost: 1] skip;
+    Int ctr = 0;
+    while (ctr < nbrOfWorkers) {
+        await this!createInstance(ctr + 1);
+        ctr=ctr+1;
+      }
+      println("[Time: "+toString(timeValue(now()))+"] ***********INIT: CREATED "+toString(nbrOfWorkers)+" WORKERS");
+      this!resize();
+    }
+    
+    Unit resize() {
+        [Cost: 2] skip;
+        Int ctr = 0;
+        await duration(cycle, cycle);
+        Int available = await lb!getNbrAvailableW();
+        Int inuse = await lb!getNbrInuseW();
+
+        println("========== [AUTOSCALE STATUS] Available: " + toString(available) + ", inuse: " + toString(inuse) + ", max: " + toString(maxWorkers));
+      
+        if (available < ((available+inuse)/4) && (available+inuse)<=maxWorkers/2) {
+            ctr = 0;
+            Rat extraworkers= inuse;
+            while (ctr<extraworkers ) {
+                await this!createInstance(ctr + 1);
+                ctr=ctr+1;
+            }
+        }
+
+        if ((inuse/3 < available) && (available > nbrOfWorkers)) {
+	        ctr = 0;
+	        Rat removeworkers= available/2;
+            while (ctr<removeworkers) {
+                Worker w = await lb!firingWorker();
+                DC dc = await w!getDC();
+                    Bool down = await cloud!shutdownInstance(dc);
+                await  c!addShutdown(dc, now());
+                ctr=ctr+1;
+            }
+        }
+
+        Bool lbFinished = await lb!getFinished();
+        if (lbFinished != True) {
+            this!resize();     
+        }
+    }
+
+    Unit createInstance(Int instanceId) {
+      Fut<DC> fs =  cloud!launchInstance(map[Pair(Speed, nResources)]);
+      DC vm = fs.get;
+      [DC: vm] Database db = new Database(dbTransactionCost);
+      [DC: vm] Service service = new Service(db, taskCost);
+      [DC: vm] Worker w = new Worker(service, instanceId);
+      await lb!addWorker(w);
+      Time startTime = await vm!getCreationTime();
+      await c!addMachine(vm,startTime);
+    }
+ }

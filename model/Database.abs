@@ -1,0 +1,18 @@
+module DatabaseModule;
+
+export *;
+
+interface Database {
+  Unit read();
+  Unit write();
+}
+
+class Database(Int transactionCost) implements Database {
+  Unit read() {
+    [Cost: transactionCost] skip;
+  }
+
+  Unit write() {
+    [Cost: transactionCost * 2] skip;
+  }
+}

@@ -1,0 +1,29 @@
+module ServiceModule;
+
+export *;
+
+import * from DatabaseModule;
+
+// Abstraction of the backend system
+interface Service {
+    Bool register(Duration deadline, Time calltime, Int customerId);
+}
+
+class Service(Database db, Int registerCost) implements Service {
+    Bool register(Duration deadline, Time calltime, Int customerId) {
+        println("[Registering customer: " + toString(customerId) + ", time: " +toString(timeValue(now()))+"] Service processing job, available time is "+toString(deadline));
+
+        await db!read();
+        [Cost: registerCost] skip;
+        await db!write();
+
+        Rat remainingTime = timeDifference(calltime,now());
+        println("[Time: "+toString(timeValue(now()))+"] Registered the customer " + toString(customerId));
+        if ((durationValue(deadline) - remainingTime) > 0) {
+            println("[Time: "+toString(timeValue(now()))+"] The registration succeeded on time! [customer: " + toString(customerId) + "]");
+        } else {
+            println("[Time: "+toString(timeValue(now()))+"] The registration violated deadline! [customer: " + toString(customerId) + "]");
+        }
+        return (durationValue(deadline) - remainingTime) > 0;
+    }
+}

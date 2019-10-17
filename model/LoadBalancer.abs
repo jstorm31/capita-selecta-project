@@ -1,0 +1,99 @@
+module LoadBalancerModule;
+
+export *;
+
+import * from WorkerModule;
+import * from CounterModule;
+
+/*
+Class to specify LoadBalancer
+The LoadBalancer will decide which worker gets the next job
+*/
+interface LoadBalancer {
+    Worker getWorker();
+    Unit releaseWorker(Worker w);
+    Unit addWorker(Worker w);
+    Worker firingWorker();
+    Int getNbrAvailableW();
+    Int getNbrInuseW();
+    
+    Bool getFinished();
+    Unit setFinished(Bool finished);
+    Unit setClientsStarted(Bool started);
+  }
+  
+class RoundRobinLoadBalancer(Counter counter, Int jobCount) implements LoadBalancer {
+    List<Worker> available = Nil;
+    List<Worker> inuse = Nil;
+    Bool finished = False;
+    Bool clientsStarted = False;
+
+    Bool getFinished() {
+        return this.finished;
+    }
+
+    Unit setFinished(Bool finished) {
+        this.finished = finished;
+    }
+
+    Unit setClientsStarted(Bool started) {
+        this.clientsStarted = started;
+    }
+  
+    Unit run() {
+        Int inUseCount = await this!getNbrInuseW();
+        while (this.clientsStarted == False) {
+            await duration(2,2);
+        }
+        await duration(1, 1);
+        // println("Running workers: " + toString(inUseCount) + ", finished: " + toString(this.finished));
+        Int finishedJobs = await this.counter!getFinished();
+        // println("Finished: " + toString(finishedJobs) + ", jobCount: " + toString(jobCount));
+
+        if (this.finished == False && finishedJobs >= jobCount) {
+            this.setFinished(True);
+            println("\n*********************************** Finished running ***********************************");
+            await this.counter!printSuccess();
+            await this.counter!printFail();
+            // await this.counter!calculateCost(50,1,now());
+            // await this.counter!printMachineUseLog();
+        }
+
+        if (this.finished == False) {
+            this!run();
+        }
+      }
+    
+      Worker getWorker(){
+      await (available != Nil);
+      Worker w = head(available);
+      available = tail(available);
+      inuse = appendright(inuse,w); 
+      return w;
+        }
+  
+      Unit releaseWorker(Worker w){
+        available = appendright(available,w);
+        inuse = without(inuse,w); 
+    }
+  
+      Unit addWorker(Worker w){
+      available = appendright(available,w);
+        }
+  
+      Worker firingWorker(){
+         await (available != Nil);
+         Worker w = head(reverse(available));
+         available =  without(available,w);
+         return w;
+       }
+  
+       Int getNbrAvailableW() {
+         Int a =length(available);     
+         return a;}
+       
+      Int getNbrInuseW() {
+        Int i = length(inuse);
+        return i;
+      }
+  }
