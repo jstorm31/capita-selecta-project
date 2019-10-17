@@ -16,11 +16,11 @@ import * from PaymentProvider;
 type Parameters = Map<String, Int>;
 
 interface Simulation {
-  Unit run();
+  Unit start();
 }
 
 class Simulation(Parameters parameters, Duration clientDeadline) implements Simulation {
-    Unit run() {
+    Unit start() {
         //parameters
         Int workersCount = fromJust(lookup(parameters, "workersCount"));
         Int maxWorkersCount = fromJust(lookup(parameters, "maxWorkersCount"));
@@ -40,10 +40,10 @@ class Simulation(Parameters parameters, Duration clientDeadline) implements Simu
         println("[Time: "+toString(timeValue(now()))+"] Created the CloudProvider");
 
         // Create server machines
-        DC frontendServer = await cloud!launchInstance(map[Pair(Speed, 1000)]);
-        DC paymentServer1 = await vendorCloud1!launchInstance(map[Pair(Speed, 1000)]);
-        DC paymentServer2 = await vendorCloud2!launchInstance(map[Pair(Speed, 1000)]);
-        DC paymentServer3 = await vendorCloud3!launchInstance(map[Pair(Speed, 1000)]);
+        DC frontendServer = await cloud!launchInstance(map[Pair(Speed, workerSpeed * maxWorkersCount)]);
+        DC paymentServer1 = await vendorCloud1!launchInstance(map[Pair(Speed, workerSpeed * maxWorkersCount)]);
+        DC paymentServer2 = await vendorCloud2!launchInstance(map[Pair(Speed, workerSpeed * maxWorkersCount)]);
+        DC paymentServer3 = await vendorCloud3!launchInstance(map[Pair(Speed, workerSpeed * maxWorkersCount)]);
 
         Counter counter = new Counter();
 
@@ -57,14 +57,22 @@ class Simulation(Parameters parameters, Duration clientDeadline) implements Simu
         [DC: frontendServer] LoadBalancer lb = new RoundRobinLoadBalancer(counter, clientsCount * clientJobsCount);
         [DC: frontendServer] Autoscaler autoScaler = new Autoscaler(cloud, providers, lb, workersCount, maxWorkersCount, workerSpeed, autoScaleInterval, taskCost, dbTransactionCost, counter);
         [DC: frontendServer] ServiceEndpoint endpoint = new ServiceEndpoint(lb, clientDeadline);
-
+    
+        println("\n========== Starting " + toString(clientsCount) + " clients... ==========");
 
         // Start up clients
         Int runningClientsCount = clientsCount;
+        Rat part = clientsCount / (10*clientsCount / 100);
+        Int progress = 0;
         while (runningClientsCount > 0) {
+            if (floor(float(runningClientsCount / part)) == 0) {
+                progress = progress + 10;
+                println("Started " + toString(progress) + "% of clients...");
+            }
             new OpenClient(endpoint, 1, taskCost, clientJobsCount, counter);
             runningClientsCount = runningClientsCount - 1;
         }
+        println("========== Started 100% of clients ==========\n");
         lb.setClientsStarted(True);
 
         println("[Time: "+toString(timeValue(now()))+"] ******CREATED " +toString(clientsCount)+"  OPEN CLIENTS  WITH "  +toString(clientJobsCount)+ " JOBS EACH");
@@ -73,18 +81,18 @@ class Simulation(Parameters parameters, Duration clientDeadline) implements Simu
 
 {
     Parameters parameters = map[
-        Pair("workersCount", 8),
-        Pair("maxWorkersCount", 16),
-        Pair("clientsCount", 200),
+        Pair("workersCount", 16),
+        Pair("maxWorkersCount", 64),
+        Pair("clientsCount", 600), // Amount of people trying to buy tickets (found on the internet) + reserve 20%
         Pair("clientJobsCount", 1),
-        Pair("taskCost", 10),
+        Pair("taskCost", 10), // Estimated
         Pair("dbTransactionCost", 1),
-        Pair("workerSpeed", 40),
-        Pair("autoScaleInterval", 2),
-        Pair("vendorResponse", 2)
+        Pair("workerSpeed", 500), // Number of requests handled per second by server (estimated for processor with 2 cores with 2GHz frequency)
+        Pair("autoScaleInterval", 2), // In time units
+        Pair("vendorResponse", 2) // In time units
     ];
-    Duration deadline = Duration(100);
+    Duration deadline = Duration(60); // 10 minutes for 6_000_000 clients is 1minute for 600_000 clients
 
     Simulation simulation = new Simulation(parameters, deadline);
-    simulation.run();
+    simulation.start();
 }

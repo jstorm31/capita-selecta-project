@@ -16,7 +16,7 @@ class Service(Database db, List<PaymentProvider> providers, Int cost) implements
     TicketSystem ticketSystem;
 
     Unit run() {
-        ticketSystem = new TicketSystem(db, provider, ceil(0.6 * float(cost)), cost, 185000);
+        ticketSystem = new TicketSystem(db, provider, ceil(0.6 * float(cost)), cost, 400000);
     }
 
     Bool execute(Duration deadline, Time calltime) {

@@ -28,7 +28,8 @@ class TicketSystem(Database db, PaymentProvider provider, Int registerCost, Int 
     }
 
     Bool login(LoginRequest request) {
-        [Cost: 1] skip;
+        Int cost = ceil(float(registerCost) * 0.5);
+        [Cost: cost] skip;
         await db!read();
         return True;
     }
