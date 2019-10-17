@@ -1,0 +1,33 @@
+module PaymentProvider;
+
+export *;
+import * from ABS.DC;
+
+data PaymentCard = PaymentCard(String name, Int number, Int validity, Int cvc);
+
+data PaymentProviderBrand = Visa | MasterCard | Maestro;
+
+interface PaymentProvider {
+    Float balance(PaymentCard card);
+}
+
+class PaymentProvider(PaymentProviderBrand brand, Int maxResponseTime) implements PaymentProvider {
+    Float balance(PaymentCard card) {
+        await duration(maxResponseTime, maxResponseTime);
+        Float balance = float((random(10000) - random(1000)) / (1 + random(9))); // Generate random rational number
+        return balance;
+    }    
+}
+
+// Test
+{
+    CloudProvider cloud = new CloudProvider("cloud");
+    DC server = await cloud!launchInstance(map[Pair(Speed, 1000)]);
+    [DC: server] PaymentProvider provider = new PaymentProvider(Visa, 100);
+    println("[Time: "+toString(timeValue(now()))+"] Created the CloudProvider");
+    println("[Time: "+toString(timeValue(now()))+"] Checking balance...");
+
+    PaymentCard card = PaymentCard("John Doe", 1234123412341234, 522, 123);
+    Float balance = await provider!balance(card);
+    println("[Time: "+toString(timeValue(now()))+"] Balance: " + toString(balance));
+}
