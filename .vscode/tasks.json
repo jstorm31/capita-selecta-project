@@ -15,7 +15,7 @@
         {
             "label": "Run",
             "type": "shell",
-            "command": "model/gen/erl/run",
+            "command": "gen/erl/run",
             "group": {
                 "kind": "test",
                 "isDefault": true

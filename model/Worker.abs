@@ -16,7 +16,7 @@ class Worker(Service service, Int id) implements Worker {
     [Cost: taskCost] skip;                                  
     Duration remainingTime = subtractFromDuration(deadline, timeDifference(started,now()));
     // When we receive more jobs, this becomes a bottleneck
-    Bool success = await service!register(remainingTime, now(), random(1000000)); 
+    Bool success = await service!execute(remainingTime, now()); 
     return success;
   }
   

@@ -20,7 +20,7 @@ class PaymentProvider(PaymentProviderBrand brand, Int maxResponseTime) implement
 }
 
 // Test
-{
+/* {
     CloudProvider cloud = new CloudProvider("cloud");
     DC server = await cloud!launchInstance(map[Pair(Speed, 1000)]);
     [DC: server] PaymentProvider provider = new PaymentProvider(Visa, 100);
@@ -30,4 +30,4 @@ class PaymentProvider(PaymentProviderBrand brand, Int maxResponseTime) implement
     PaymentCard card = PaymentCard("John Doe", 1234123412341234, 522, 123);
     Float balance = await provider!balance(card);
     println("[Time: "+toString(timeValue(now()))+"] Balance: " + toString(balance));
-}
+} */

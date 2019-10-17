@@ -3,19 +3,31 @@ module ServiceModule;
 export *;
 
 import * from DatabaseModule;
+import * from PaymentProvider;
 
 // Abstraction of the backend system
 interface Service {
-    Bool register(Duration deadline, Time calltime, Int customerId);
+    Bool execute(Duration deadline, Time calltime);
 }
 
-class Service(Database db, Int registerCost) implements Service {
-    Bool register(Duration deadline, Time calltime, Int customerId) {
+class Service(Database db, List<PaymentProvider> providers, Int registerCost) implements Service {
+    Bool execute(Duration deadline, Time calltime) {
+        Int customerId = random(1000000);
         println("[Registering customer: " + toString(customerId) + ", time: " +toString(timeValue(now()))+"] Service processing job, available time is "+toString(deadline));
 
         await db!read();
-        [Cost: registerCost] skip;
-        await db!write();
+        PaymentProvider provider = nth(providers, random(2));
+        PaymentCard card = PaymentCard("John Doe", 1234123412341234, 522, 123);
+        Float balance = await provider!balance(card);
+
+        if (balance > 100.0) {
+            println("[Time: "+toString(timeValue(now()))+"] Customer " + toString(customerId) + " has sufficent balance: " + toString(balance));
+            [Cost: registerCost] skip;
+            await db!write();
+        } else {
+            [Cost: registerCost / 4] skip;
+            println("[Time: "+toString(timeValue(now()))+"] Customer " + toString(customerId) + " has insufficent balance: " + toString(balance));
+        }
 
         Rat remainingTime = timeDifference(calltime,now());
         println("[Time: "+toString(timeValue(now()))+"] Registered the customer " + toString(customerId));

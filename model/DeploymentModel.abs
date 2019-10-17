@@ -11,6 +11,7 @@ import * from WorkerModule;
 import * from ServiceModule;
 import * from CounterModule;
 import * from ServiceEndpointModule;
+import * from PaymentProvider;
 
 type Parameters = Map<String, Int>;
 
@@ -29,19 +30,34 @@ class Simulation(Parameters parameters, Duration clientDeadline) implements Simu
         Int dbTransactionCost = fromJust(lookup(parameters, "dbTransactionCost"));
         Int workerSpeed = fromJust(lookup(parameters, "workerSpeed"));
         Int autoScaleInterval = fromJust(lookup(parameters, "autoScaleInterval"));
+        Int vendorResponse = fromJust(lookup(parameters, "vendorResponse"));
 
-        // Create the cloud provider
-        CloudProvider cloud = new CloudProvider("cloud");
+        // Create cloud providers
+        CloudProvider cloud = new CloudProvider("Cloud");
+        CloudProvider vendorCloud1 = new CloudProvider("Vendor Cloud 1");
+        CloudProvider vendorCloud2 = new CloudProvider("Vendor Cloud 2");
+        CloudProvider vendorCloud3 = new CloudProvider("Vendor Cloud 3");
         println("[Time: "+toString(timeValue(now()))+"] Created the CloudProvider");
 
         // Create server machines
         DC frontendServer = await cloud!launchInstance(map[Pair(Speed, 1000)]);
+        DC paymentServer1 = await vendorCloud1!launchInstance(map[Pair(Speed, 1000)]);
+        DC paymentServer2 = await vendorCloud2!launchInstance(map[Pair(Speed, 1000)]);
+        DC paymentServer3 = await vendorCloud3!launchInstance(map[Pair(Speed, 1000)]);
+
+        Counter counter = new Counter();
+
+        // Vendors
+        [DC: paymentServer1] PaymentProvider prov1 = new PaymentProvider(Visa, vendorResponse + random(2));
+        [DC: paymentServer2] PaymentProvider prov2 = new PaymentProvider(MasterCard, vendorResponse + random(2));
+        [DC: paymentServer3] PaymentProvider prov3 = new PaymentProvider(Maestro, vendorResponse + random(2));
+        List<PaymentProvider> providers = list[prov1, prov2, prov3];
 
         // Deploy the system
-        Counter counter = new Counter();
         [DC: frontendServer] LoadBalancer lb = new RoundRobinLoadBalancer(counter, clientsCount * clientJobsCount);
-        [DC: frontendServer] Autoscaler autoScaler = new Autoscaler(cloud, lb, workersCount, maxWorkersCount, workerSpeed, autoScaleInterval, taskCost, dbTransactionCost, counter);
+        [DC: frontendServer] Autoscaler autoScaler = new Autoscaler(cloud, providers, lb, workersCount, maxWorkersCount, workerSpeed, autoScaleInterval, taskCost, dbTransactionCost, counter);
         [DC: frontendServer] ServiceEndpoint endpoint = new ServiceEndpoint(lb, clientDeadline);
+
 
         // Start up clients
         Int runningClientsCount = clientsCount;
@@ -64,9 +80,10 @@ class Simulation(Parameters parameters, Duration clientDeadline) implements Simu
         Pair("taskCost", 10),
         Pair("dbTransactionCost", 1),
         Pair("workerSpeed", 40),
-        Pair("autoScaleInterval", 2)
+        Pair("autoScaleInterval", 2),
+        Pair("vendorResponse", 2)
     ];
-    Duration deadline = Duration(10);
+    Duration deadline = Duration(100);
 
     Simulation simulation = new Simulation(parameters, deadline);
     simulation.run();

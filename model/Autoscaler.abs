@@ -8,11 +8,11 @@ import * from WorkerModule;
 import * from ServiceModule;
 import * from DatabaseModule;
 import * from CounterModule;
-
+import * from PaymentProvider;
 
 interface Autoscaler {}
 
-class Autoscaler(CloudProvider cloud, LoadBalancer lb, Int nbrOfWorkers, Int maxWorkers, Int nResources, Int cycle, Int taskCost, Int dbTransactionCost, Counter c)
+class Autoscaler(CloudProvider cloud, List<PaymentProvider> providers, LoadBalancer lb, Int nbrOfWorkers, Int maxWorkers, Int nResources, Int cycle, Int taskCost, Int dbTransactionCost, Counter c)
 implements Autoscaler {
   Unit run(){
     [Cost: 1] skip;
@@ -65,7 +65,7 @@ implements Autoscaler {
       Fut<DC> fs =  cloud!launchInstance(map[Pair(Speed, nResources)]);
       DC vm = fs.get;
       [DC: vm] Database db = new Database(dbTransactionCost);
-      [DC: vm] Service service = new Service(db, taskCost);
+      [DC: vm] Service service = new Service(db, providers, taskCost);
       [DC: vm] Worker w = new Worker(service, instanceId);
       await lb!addWorker(w);
       Time startTime = await vm!getCreationTime();
