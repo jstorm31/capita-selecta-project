@@ -13,6 +13,24 @@ cloud Cloud {
     FrontendServer -(0- VirtualMachine
 }
 
+cloud Vendor_1 {
+    node Server_1 {
+        component PaymentProvider_1
+    }
+}
+
+cloud Vendor_2 {
+    node Server_2 {
+        component PaymentProvider_2
+    }
+}
+
+cloud Vendor_3 {
+    node Server_3 {
+        component PaymentProvider_3
+    }
+}
+
 frame Clients {
     frame cl_1 [
         Client 1
@@ -26,4 +44,7 @@ frame Clients {
 }
 
 Clients -(0- FrontendServer
+FrontendServer -(0- PaymentProvider_1
+FrontendServer -(0- PaymentProvider_2
+FrontendServer -(0- PaymentProvider_3
 @enduml
