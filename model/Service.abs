@@ -4,30 +4,31 @@ export *;
 
 import * from DatabaseModule;
 import * from PaymentProvider;
+import * from TicketSystem;
 
 // Abstraction of the backend system
 interface Service {
     Bool execute(Duration deadline, Time calltime);
 }
 
-class Service(Database db, List<PaymentProvider> providers, Int registerCost) implements Service {
+class Service(Database db, List<PaymentProvider> providers, Int cost) implements Service {
+    PaymentProvider provider = nth(providers, random(2));
+    TicketSystem ticketSystem;
+
+    Unit run() {
+        ticketSystem = new TicketSystem(db, provider, ceil(0.6 * float(cost)), cost, 185000);
+    }
+
     Bool execute(Duration deadline, Time calltime) {
-        Int customerId = random(1000000);
-        println("[Registering customer: " + toString(customerId) + ", time: " +toString(timeValue(now()))+"] Service processing job, available time is "+toString(deadline));
+        String customerId = toString(random(1000000));
+        Int ticketCount = 1 + random(3);
+        UserAuth user = UserAuth(customerId, "password");
+        LoginRequest request = LoginRequest("token", user);
 
-        await db!read();
-        PaymentProvider provider = nth(providers, random(2));
-        PaymentCard card = PaymentCard("John Doe", 1234123412341234, 522, 123);
-        Float balance = await provider!balance(card);
+        println("[Customer: " + toString(customerId) + "] Ordering " + toString(ticketCount) + "tickets | time: " +toString(timeValue(now()))+"] Service processing job, available time is "+toString(deadline));
 
-        if (balance > 100.0) {
-            println("[Time: "+toString(timeValue(now()))+"] Customer " + toString(customerId) + " has sufficent balance: " + toString(balance));
-            [Cost: registerCost] skip;
-            await db!write();
-        } else {
-            [Cost: registerCost / 4] skip;
-            println("[Time: "+toString(timeValue(now()))+"] Customer " + toString(customerId) + " has insufficent balance: " + toString(balance));
-        }
+        await ticketSystem!login(request);
+        OrderResponse response = await ticketSystem!order(ticketCount);
 
         Rat remainingTime = timeDifference(calltime,now());
         println("[Time: "+toString(timeValue(now()))+"] Registered the customer " + toString(customerId));

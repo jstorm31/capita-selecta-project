@@ -1,0 +1,60 @@
+module TicketSystem;
+
+export *;
+
+import * from PaymentProvider;
+import * from DatabaseModule;
+
+data UserAuth = UserAuth(String username, String password);
+data RegistrationRequest = RegistrationRequest(UserAuth auth, String, String address, Int gender, PaymentCard card);
+data RegistrationResponse = RegistrationResponse(Int id, String);
+data LoginRequest = LoginRequest(String token, UserAuth user);
+data OrderResponse = OrderResponse(Int code, String message, Maybe<String> ticketsUrl);
+
+interface TicketSystem {
+    RegistrationResponse register(RegistrationRequest request);
+    Bool login(LoginRequest request);
+    OrderResponse order(Int ticketsCount);
+}
+
+class TicketSystem(Database db, PaymentProvider provider, Int registerCost, Int orderCost, Int availableTickets) implements TicketSystem {
+    Int maxUserOrder = 4;
+    Float ticketPrices = 100.0;
+
+    RegistrationResponse register(RegistrationRequest request) {
+        [Cost: registerCost] skip;
+        await db!write();
+        return RegistrationResponse(random(10000), "tmr" + toString(random(1000000)));
+    }
+
+    Bool login(LoginRequest request) {
+        [Cost: 1] skip;
+        await db!read();
+        return True;
+    }
+
+    OrderResponse order(Int ticketsCount) {
+        OrderResponse response = OrderResponse(200, "Success", Just("http://download-my-file.com/ticket.pdf"));
+        [Cost: orderCost] skip;
+        await db!read();
+
+        if (ticketsCount > maxUserOrder) {
+            response = OrderResponse(403, "Max 4 tickets can be bought", Nothing);
+        }
+        
+        if (availableTickets >= ticketsCount) {
+            PaymentCard card = PaymentCard(Visa, "John Doe", 1234123412341234, 522, 123);
+            Float balance = await provider!balance(card);
+
+            if (balance >= ticketPrices) {
+                await provider!pay(card);
+                await db!write();
+            } else {
+                response = OrderResponse(402, "Insuficcent balance", Nothing);
+            }
+        } else {
+            response = OrderResponse(401, "Sold out: no tickets available", Nothing);
+        }
+        return response;
+    }
+}

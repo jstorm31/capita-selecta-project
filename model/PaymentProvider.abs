@@ -3,20 +3,25 @@ module PaymentProvider;
 export *;
 import * from ABS.DC;
 
-data PaymentCard = PaymentCard(String name, Int number, Int validity, Int cvc);
+data PaymentProviderType = Visa | MasterCard | Maestro;
 
-data PaymentProviderBrand = Visa | MasterCard | Maestro;
+data PaymentCard = PaymentCard(PaymentProviderType, String name, Int number, Int validity, Int cvc);
 
 interface PaymentProvider {
     Float balance(PaymentCard card);
+    Unit pay(PaymentCard card);
 }
 
-class PaymentProvider(PaymentProviderBrand brand, Int maxResponseTime) implements PaymentProvider {
+class PaymentProvider(PaymentProviderType brand, Int maxResponseTime) implements PaymentProvider {
     Float balance(PaymentCard card) {
         await duration(maxResponseTime, maxResponseTime);
         Float balance = float((random(10000) - random(1000)) / (1 + random(9))); // Generate random rational number
         return balance;
     }    
+
+    Unit pay(PaymentCard card) {
+        await duration(maxResponseTime, maxResponseTime);
+    }
 }
 
 // Test
