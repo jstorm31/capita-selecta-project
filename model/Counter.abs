@@ -70,8 +70,18 @@ def Map<A, B> mapTail<A, B>(Map<A, B> map) = // remove the head of the map
       this!printProgress();
     }
   
-    Unit printSuccess(){println("[Time: "+toString(timeValue(now()))+"] ✅ Total successes: "+ toString(success));}
-    Unit printFail(){println("[Time: "+toString(timeValue(now()))+"] ❌ Total Fails: "+ toString(fail));}
+    Unit printSuccess(){
+
+      println("[Time: "+toString(timeValue(now()))+"] ✅ Total successes: "+ toString(success));
+    }
+    
+    Unit printFail(){
+      Float time = float(timeValue(now()));
+      Float speed = float(finished) / time;
+
+      println("[Time: " + toString(time) + "] ❌ Total Fails: "+ toString(fail));
+      println("[Time: " + toString(time) + "] Processing speed per time unit: "+ toString(speed));
+    }
   
     Unit addMachine(DeploymentComponent id, Time startup){
       machines =  InsertAssoc(Pair(id,Pair(startup,Nothing)), machines);

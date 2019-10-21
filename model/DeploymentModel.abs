@@ -20,18 +20,25 @@ interface Simulation {
 }
 
 class Simulation(Parameters parameters, Duration clientDeadline) implements Simulation {
-    Unit start() {
-        //parameters
-        Int workersCount = fromJust(lookup(parameters, "workersCount"));
-        Int maxWorkersCount = fromJust(lookup(parameters, "maxWorkersCount"));
-        Int clientsCount = fromJust(lookup(parameters, "clientsCount"));
-        Int clientJobsCount = fromJust(lookup(parameters, "clientJobsCount"));
-        Int taskCost = fromJust(lookup(parameters, "taskCost"));
-        Int dbTransactionCost = fromJust(lookup(parameters, "dbTransactionCost"));
-        Int workerSpeed = fromJust(lookup(parameters, "workerSpeed"));
-        Int autoScaleInterval = fromJust(lookup(parameters, "autoScaleInterval"));
-        Int vendorSpeed = fromJust(lookup(parameters, "vendorSpeed"));
+    
+    // Parameters
+    Int workersCount = fromJust(lookup(parameters, "workersCount"));
+    Int maxWorkersCount = fromJust(lookup(parameters, "maxWorkersCount"));
+    Int clientsCount = fromJust(lookup(parameters, "clientsCount"));
+    Int clientJobsCount = fromJust(lookup(parameters, "clientJobsCount"));
+    Int taskCost = fromJust(lookup(parameters, "taskCost"));
+    Int dbTransactionCost = fromJust(lookup(parameters, "dbTransactionCost"));
+    Int workerSpeed = fromJust(lookup(parameters, "workerSpeed"));
+    Int autoScaleInterval = fromJust(lookup(parameters, "autoScaleInterval"));
+    Int vendorSpeed = fromJust(lookup(parameters, "vendorSpeed"));
 
+    Counter counter;
+
+    Unit run() {
+        counter = new Counter(clientsCount);
+    }
+
+    Unit start() {
         // Create cloud providers
         CloudProvider cloud = new CloudProvider("Cloud");
         CloudProvider vendorCloud1 = new CloudProvider("Vendor Cloud 1");
@@ -44,8 +51,6 @@ class Simulation(Parameters parameters, Duration clientDeadline) implements Simu
         DC paymentServer1 = await vendorCloud1!launchInstance(map[Pair(Speed, workerSpeed * maxWorkersCount)]);
         DC paymentServer2 = await vendorCloud2!launchInstance(map[Pair(Speed, workerSpeed * maxWorkersCount)]);
         DC paymentServer3 = await vendorCloud3!launchInstance(map[Pair(Speed, workerSpeed * maxWorkersCount)]);
-
-        Counter counter = new Counter(clientsCount);
 
         // Vendors
         [DC: paymentServer1] PaymentProvider prov1 = new PaymentProvider(Visa, vendorSpeed + random(3));
@@ -61,37 +66,42 @@ class Simulation(Parameters parameters, Duration clientDeadline) implements Simu
         println("\n========== Starting " + toString(clientsCount) + " clients... ==========");
 
         // Start up clients in batches
-        Int runningClientsCount = clientsCount;
-        Rat part = clientsCount / (10*clientsCount / 100);
-        Int progress = 0;
         Int batch = 500; // process x clients at a time
 
-        while (runningClientsCount > 0) {
-            Int currentBatch = 0;
-            await duration(rat(1.0), rat(1.0));
-
-            while (currentBatch < batch) {
-                if (floor(float(runningClientsCount / part)) == 0) {
-                    progress = progress + 10;
-                    println("Started " + toString(progress) + "% of clients...");
+        if (clientsCount <= batch) {
+            await this!runClients(clientsCount, endpoint);
+            lb.setClientsStarted(True);
+        } else {
+            Int i = 0;
+            while (i < clientsCount) {
+                await this!runClients(batch, endpoint);
+                if (i == 0) {
+                    lb.setClientsStarted(True);
                 }
-                new OpenClient(endpoint, 1, taskCost, clientJobsCount, counter);
-                currentBatch = currentBatch + 1;
-                runningClientsCount = runningClientsCount - 1;
+                i = i + batch;
             }
         }
-        println("========== Started 100% of clients ==========\n");
-        lb.setClientsStarted(True);
 
+        println("========== Started 100% of clients ==========\n");
         println("[Time: "+toString(timeValue(now()))+"] ******CREATED " +toString(clientsCount)+"  OPEN CLIENTS  WITH "  +toString(clientJobsCount)+ " JOBS EACH");
+    }
+
+    Unit runClients(Int count, ServiceEndpoint endpoint) {
+        Int i = 0;
+
+        while (i < count) {
+            new OpenClient(endpoint, 1, taskCost, clientJobsCount, counter);
+            i = i + 1;
+        }
+        println("Started all clients in a batch");
     }
 }
 
 {
     Parameters parameters = map[
-        Pair("workersCount", 64),
-        Pair("maxWorkersCount", 128),
-        Pair("clientsCount", 1000), // Amount of people trying to buy tickets (found on the internet) + reserve 20%
+        Pair("workersCount", 1),
+        Pair("maxWorkersCount", 1),
+        Pair("clientsCount", 400), // Amount of people trying to buy tickets (found on the internet) + reserve 20%
         Pair("clientJobsCount", 1),
         Pair("taskCost", 10), // Estimated
         Pair("dbTransactionCost", 1),
@@ -99,7 +109,7 @@ class Simulation(Parameters parameters, Duration clientDeadline) implements Simu
         Pair("autoScaleInterval", 2), // In time units
         Pair("vendorSpeed", 4) // In time units
     ];
-    Duration deadline = Duration(rat(1)); // 10 minutes for 6_000_000 clients is 1minute for 600_000 clients
+    Duration deadline = Duration(5); // 10 minutes for 6_000_000 clients is 1minute for 600_000 clients
 
     Simulation simulation = new Simulation(parameters, deadline);
     simulation.start();
