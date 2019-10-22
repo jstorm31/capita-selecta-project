@@ -1,0 +1,34 @@
+module Crypto;
+
+export *;
+
+import * from ABS.DC;
+
+data Data = Encrypted | Decrypted;
+
+interface KeyVault {
+    String getKey();
+}
+
+class KeyVault implements KeyVault {
+    String getKey() {
+        return "secret_key";
+    }
+}
+
+interface Crypto {
+    Data encrypt(String key);
+    Data decrypt(String key);
+}
+
+class Crypto(Int cost) implements Crypto {
+    Data encrypt(String key) {
+        [Cost: cost] skip;
+        return Encrypted;
+    }
+
+    Data decrypt(String key) {
+        [Cost: cost] skip;
+        return Decrypted;
+    }
+}
