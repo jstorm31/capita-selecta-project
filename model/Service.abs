@@ -21,15 +21,13 @@ class Service(Database db, List<PaymentProvider> providers, Int cost) implements
     }
 
     Bool execute(Duration deadline, Time calltime) {
-        Time started = now();
-
         String customerId = toString(random(1000000));
         Int ticketCount = 1 + random(3);
         UserAuth user = UserAuth(customerId, "password");
         LoginRequest request = LoginRequest("token", user);
 
         if (verbose) {
-            println("[Customer: " + toString(customerId) + "] Ordering " + toString(ticketCount) + "tickets | time: " +toString(timeValue(now()))+"] Service processing job, available time is "+toString(deadline));
+            println("[Customer: " + toString(customerId) + "] Ordering " + toString(ticketCount) + " tickets ] Service processing job, available time is " + toString(deadline));
         }
 
         await ticketSystem!login(request);

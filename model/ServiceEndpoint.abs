@@ -6,16 +6,21 @@ import * from LoadBalancerModule;
 // Class to specify Application API
 interface ServiceEndpoint { 
     Bool invokeService(Rat cost);
+    Unit setDeadline(Duration deadline);
 }
 
-class ServiceEndpoint(LoadBalancer lb, Duration responseTime) implements ServiceEndpoint {
-    Bool invokeService(Rat cost){
+class ServiceEndpoint(LoadBalancer lb, Duration deadline) implements ServiceEndpoint {
+    Bool invokeService(Rat cost) {
       Time started = now();
       [Cost: 1] skip;
       Worker w =  await lb!getWorker();
-      Bool success = await w!process(cost, started, responseTime);
+      Bool success = await w!process(cost, started, deadline);
       await lb!releaseWorker(w);
       // Returns success-handler to client:
       return success;
+    }
+
+    Unit setDeadline(Duration deadline) {
+      this.deadline = deadline;
     }
 }

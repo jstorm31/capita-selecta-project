@@ -31,6 +31,7 @@ class Simulation(Parameters parameters, Duration clientDeadline) implements Simu
     Int workerSpeed = fromJust(lookup(parameters, "workerSpeed"));
     Int autoScaleInterval = fromJust(lookup(parameters, "autoScaleInterval"));
     Int vendorSpeed = fromJust(lookup(parameters, "vendorSpeed"));
+    Int batch = fromJust(lookup(parameters, "batch"));
 
     Counter counter;
 
@@ -66,19 +67,29 @@ class Simulation(Parameters parameters, Duration clientDeadline) implements Simu
         println("\n========== Starting " + toString(clientsCount) + " clients... ==========");
 
         // Start up clients in batches
-        Int batch = 500; // process x clients at a time
-
+        Time started = now();
         if (clientsCount <= batch) {
             await this!runClients(clientsCount, endpoint);
             lb.setClientsStarted(True);
         } else {
             Int i = 0;
             while (i < clientsCount) {
+                Time clientsStarting = now();
                 await this!runClients(batch, endpoint);
                 if (i == 0) {
                     lb.setClientsStarted(True);
                 }
                 i = i + batch;
+                println(toString(i) + " of " + toString(clientsCount) + " clients started");
+
+                Int finished = await counter!getFinished();
+                while (finished < i) {
+                    await duration(1, 1);
+                    finished = await counter!getFinished();
+                }
+                
+                Duration remainingTime = subtractFromDuration(clientDeadline, timeDifference(started, now()) - timeDifference(started, clientsStarting));
+                endpoint.setDeadline(remainingTime);
             }
         }
 
@@ -93,23 +104,23 @@ class Simulation(Parameters parameters, Duration clientDeadline) implements Simu
             new OpenClient(endpoint, 1, taskCost, clientJobsCount, counter);
             i = i + 1;
         }
-        println("Started all clients in a batch");
     }
 }
 
 {
     Parameters parameters = map[
-        Pair("workersCount", 1),
-        Pair("maxWorkersCount", 1),
-        Pair("clientsCount", 400), // Amount of people trying to buy tickets (found on the internet) + reserve 20%
+        Pair("workersCount", 32),
+        Pair("maxWorkersCount", 64),
+        Pair("clientsCount", 1000), // Amount of people trying to buy tickets (found on the internet) + reserve 20%
         Pair("clientJobsCount", 1),
         Pair("taskCost", 10), // Estimated
         Pair("dbTransactionCost", 1),
-        Pair("workerSpeed", 2000), // Number of requests handled per second by server (estimated for processor with 2 cores with 2GHz frequency)
+        Pair("workerSpeed", 3000), // Number of requests handled per second by server (estimated for processor with 2 cores with 2GHz frequency)
         Pair("autoScaleInterval", 2), // In time units
-        Pair("vendorSpeed", 4) // In time units
+        Pair("vendorSpeed", 4), // In time units
+        Pair("batch", 1000)
     ];
-    Duration deadline = Duration(5); // 10 minutes for 6_000_000 clients is 1minute for 600_000 clients
+    Duration deadline = Duration(6); // 10 minutes for 6_000_000 clients is 1minute for 600_000 clients
 
     Simulation simulation = new Simulation(parameters, deadline);
     simulation.start();

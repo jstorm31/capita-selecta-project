@@ -99,7 +99,9 @@ def Map<A, B> mapTail<A, B>(Map<A, B> map) = // remove the head of the map
 
     Unit printProgress() {
       Int progress = floor(float((finished / total) * 100));
-      println("[Time: "+toString(timeValue(now())) + "] ⏱ Progress: " + toString(progress) + "%");
+      if (progress % 5 == 0) {
+        println("[Time: "+toString(timeValue(now())) + "] ⏱ Progress: " + toString(progress) + "%");
+      }
     }
   
     Unit printMachineUseLog(){

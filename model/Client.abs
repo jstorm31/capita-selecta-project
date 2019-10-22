@@ -15,7 +15,7 @@ class OpenClient (ServiceEndpoint ep, Int cycle, Rat cost, Int nbrOfJobs, Counte
     Unit run() { 
         Fut<Bool> fresult =  ep!invokeService(cost);
         jobcount = jobcount + 1;
-        // await duration(cycle, cycle);
+        await duration(cycle, cycle);
         if (jobcount < nbrOfJobs) { this!run(); }
         await fresult?; 
         Bool result = fresult.get;
