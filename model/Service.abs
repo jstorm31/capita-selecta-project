@@ -5,19 +5,20 @@ export *;
 import * from DatabaseModule;
 import * from PaymentProvider;
 import * from TicketSystem;
+import * from Crypto;
 
 // Abstraction of the backend system
 interface Service {
     Bool execute(Duration deadline, Time calltime);
 }
 
-class Service(Database db, List<PaymentProvider> providers, Int cost) implements Service {
+class Service(Database db, List<PaymentProvider> providers, Int cost, KeyVault keyVault, Crypto crypto) implements Service {
     PaymentProvider provider = nth(providers, random(2));
     TicketSystem ticketSystem;
     Bool verbose = False;
 
     Unit run() {
-        ticketSystem = new TicketSystem(db, provider, ceil(0.6 * float(cost)), cost, 400000);
+        ticketSystem = new TicketSystem(db, provider, ceil(0.6 * float(cost)), cost, 400000, keyVault, crypto);
     }
 
     Bool execute(Duration deadline, Time calltime) {

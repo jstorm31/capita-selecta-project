@@ -4,6 +4,7 @@ export *;
 
 import * from PaymentProvider;
 import * from DatabaseModule;
+import * from Crypto;
 
 data UserAuth = UserAuth(String username, String password);
 data RegistrationRequest = RegistrationRequest(UserAuth auth, String, String address, Int gender, PaymentCard card);
@@ -17,27 +18,41 @@ interface TicketSystem {
     OrderResponse order(Int ticketsCount);
 }
 
-class TicketSystem(Database db, PaymentProvider provider, Int registerCost, Int orderCost, Int availableTickets) implements TicketSystem {
+class TicketSystem(Database db, PaymentProvider provider, Int registerCost, Int orderCost, Int availableTickets, KeyVault keyVault, Crypto crypto) implements TicketSystem {
     Int maxUserOrder = 4;
     Float ticketPrices = 100.0;
 
     RegistrationResponse register(RegistrationRequest request) {
+        String key = await keyVault!getKey();
+
+        await crypto!decrypt(key);
         [Cost: registerCost] skip;
+        await crypto!encrypt(key);
         await db!write();
+
         return RegistrationResponse(random(10000), "tmr" + toString(random(1000000)));
     }
 
     Bool login(LoginRequest request) {
+        String key = await keyVault!getKey();
+
+        await crypto!decrypt(key);
         Int cost = ceil(float(registerCost) * 0.5);
         [Cost: cost] skip;
         await db!read();
+        await crypto!decrypt(key);
+
         return True;
     }
 
     OrderResponse order(Int ticketsCount) {
+        String key = await keyVault!getKey();
+
+        await crypto!decrypt(key); // Received data
         OrderResponse response = OrderResponse(200, "Success", Just("http://download-my-file.com/ticket.pdf"));
         [Cost: orderCost] skip;
         await db!read();
+        await crypto!decrypt(key); // Data from DB
 
         if (ticketsCount > maxUserOrder) {
             response = OrderResponse(403, "Max 4 tickets can be bought", Nothing);
@@ -49,6 +64,7 @@ class TicketSystem(Database db, PaymentProvider provider, Int registerCost, Int 
 
             if (balance >= ticketPrices) {
                 await provider!pay(card);
+                await crypto!decrypt(key); // data to db
                 await db!write();
             } else {
                 response = OrderResponse(402, "Insuficcent balance", Nothing);

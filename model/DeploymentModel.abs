@@ -12,6 +12,7 @@ import * from ServiceModule;
 import * from CounterModule;
 import * from ServiceEndpointModule;
 import * from PaymentProvider;
+import * from Crypto;
 
 type Parameters = Map<String, Int>;
 
@@ -32,6 +33,7 @@ class Simulation(Parameters parameters, Duration clientDeadline) implements Simu
     Int autoScaleInterval = fromJust(lookup(parameters, "autoScaleInterval"));
     Int vendorSpeed = fromJust(lookup(parameters, "vendorSpeed"));
     Int batch = fromJust(lookup(parameters, "batch"));
+    Int cryptoCost = fromJust(lookup(parameters, "cryptoCost"));
 
     Counter counter;
 
@@ -60,9 +62,11 @@ class Simulation(Parameters parameters, Duration clientDeadline) implements Simu
         List<PaymentProvider> providers = list[prov1, prov2, prov3];
 
         // Deploy the system
+        [DC: frontendServer] KeyVault keyVault = new KeyVault();
+        [DC: frontendServer] Crypto crypto = new Crypto(cryptoCost);
         [DC: frontendServer] LoadBalancer lb = new RoundRobinLoadBalancer(counter, clientsCount * clientJobsCount);
-        [DC: frontendServer] Autoscaler autoScaler = new Autoscaler(cloud, providers, lb, workersCount, maxWorkersCount, workerSpeed, autoScaleInterval, taskCost, dbTransactionCost, counter);
-        [DC: frontendServer] ServiceEndpoint endpoint = new ServiceEndpoint(lb, clientDeadline);
+        [DC: frontendServer] Autoscaler autoScaler = new Autoscaler(cloud, providers, lb, workersCount, maxWorkersCount, workerSpeed, autoScaleInterval, taskCost, dbTransactionCost, counter, keyVault, crypto);
+        [DC: frontendServer] ServiceEndpoint endpoint = new ServiceEndpoint(lb, clientDeadline, crypto, keyVault);
     
         println("\n========== Starting " + toString(clientsCount) + " clients... ==========");
 
@@ -109,16 +113,17 @@ class Simulation(Parameters parameters, Duration clientDeadline) implements Simu
 
 {
     Parameters parameters = map[
-        Pair("workersCount", 32),
-        Pair("maxWorkersCount", 64),
-        Pair("clientsCount", 1000), // Amount of people trying to buy tickets (found on the internet) + reserve 20%
+        Pair("workersCount", 2),
+        Pair("maxWorkersCount", 4),
+        Pair("clientsCount", 500), // Amount of people trying to buy tickets (found on the internet) + reserve 20%
         Pair("clientJobsCount", 1),
         Pair("taskCost", 10), // Estimated
         Pair("dbTransactionCost", 1),
         Pair("workerSpeed", 3000), // Number of requests handled per second by server (estimated for processor with 2 cores with 2GHz frequency)
         Pair("autoScaleInterval", 2), // In time units
         Pair("vendorSpeed", 4), // In time units
-        Pair("batch", 1000)
+        Pair("batch", 1000),
+        Pair("cryptoCost", 2)
     ];
     Duration deadline = Duration(6); // 10 minutes for 6_000_000 clients is 1minute for 600_000 clients
 

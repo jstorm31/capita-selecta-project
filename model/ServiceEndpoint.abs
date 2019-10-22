@@ -2,6 +2,7 @@ module ServiceEndpointModule;
 export *;
 import * from WorkerModule;
 import * from LoadBalancerModule;
+import * from Crypto;
 
 // Class to specify Application API
 interface ServiceEndpoint { 
@@ -9,9 +10,14 @@ interface ServiceEndpoint {
     Unit setDeadline(Duration deadline);
 }
 
-class ServiceEndpoint(LoadBalancer lb, Duration deadline) implements ServiceEndpoint {
+class ServiceEndpoint(LoadBalancer lb, Duration deadline, Crypto crypto, KeyVault keyVault) implements ServiceEndpoint {
     Bool invokeService(Rat cost) {
       Time started = now();
+
+      // Encrypt imediately after receiving client request
+      String key = await keyVault!getKey();
+      await crypto!encrypt(key);
+      
       [Cost: 1] skip;
       Worker w =  await lb!getWorker();
       Bool success = await w!process(cost, started, deadline);
