@@ -113,9 +113,9 @@ class Simulation(Parameters parameters, Duration clientDeadline) implements Simu
 
 {
     Parameters parameters = map[
-        Pair("workersCount", 2),
-        Pair("maxWorkersCount", 4),
-        Pair("clientsCount", 500), // Amount of people trying to buy tickets (found on the internet) + reserve 20%
+        Pair("workersCount", 128),
+        Pair("maxWorkersCount", 256),
+        Pair("clientsCount", 1000), // Amount of people trying to buy tickets + reserve 20%
         Pair("clientJobsCount", 1),
         Pair("taskCost", 10), // Estimated
         Pair("dbTransactionCost", 1),
