@@ -5,9 +5,10 @@ left to right direction
 
 together {
     class TicketSystem {
-        register(request)
-        login(request)
-        order(ticketsCount)
+        Int maxTicketCount
+        register(name, password)
+        login(name, password, token)
+        order(count)
     }
 
     class KeyVault {
