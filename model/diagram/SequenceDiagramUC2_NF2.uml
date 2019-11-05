@@ -1,0 +1,42 @@
+@startuml seqUc2Nf2
+title Sequence diagram UC2 NF2
+
+
+Client -> ServiceEndpoint: run()
+
+ServiceEndpoint -> KeyVault: getKey()
+ServiceEndpoint -> Crypto: encrypt(key, data)
+ServiceEndpoint -> LoadBalancer: invokeService()
+LoadBalancer -> Worker: process()
+activate Worker
+activate Service
+activate TicketSystem
+
+Worker -> Service: execute()
+Service -> TicketSystem: order(count)
+
+TicketSystem -> KeyVault: getKey()
+TicketSystem -> Crypto: decrypt(key, data)
+
+TicketSystem -> PaymentProvider: getBalance()
+alt sufficent amount
+    TicketSystem -> PaymentProvider: pay()
+end
+
+TicketSystem -> KeyVault: getKey()
+TicketSystem -> Crypto: encrypt(key, data)
+
+Service <-- TicketSystem: Response
+Worker <-- Service: Response
+return Response
+
+deactivate Worker
+deactivate Service
+deactivate TicketSystem
+
+ServiceEndpoint <-- LoadBalancer: Response
+ServiceEndpoint -> KeyVault: getKey()
+ServiceEndpoint -> Crypto: decrypt(key, Response)
+
+Client <-- ServiceEndpoint: Response
+@enduml

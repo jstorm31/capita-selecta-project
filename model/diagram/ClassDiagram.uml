@@ -16,8 +16,8 @@ together {
     }
 
     class Crypto {
-        encrypt(key)
-        decrypt(key)
+        encrypt(key, data)
+        decrypt(key, data)
     }
 
     class PaymentProvider {
