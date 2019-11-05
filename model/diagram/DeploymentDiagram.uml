@@ -1,46 +1,63 @@
 @startuml
-cloud Cloud {
-    node FrontendServer {
-        component LoadBalancer
-        component Autoscaler
-        component Endpoint
+title = Deployment diagram
+
+together {
+    frame Clients {
+        frame cl_1 [
+            Client 1
+        ]
+        frame cl_2 [
+            Client 2
+        ]
+        frame cl_n [
+            Client N
+        ]
     }
-    node VirtualMachine {
-        component Worker
-        component Service
-        database Database
+    
+    node KeyVaultServer {
+        component KeyVault
     }
-    FrontendServer -(0- VirtualMachine
+
+    cloud Cloud {
+        node VirtualMachines {
+            component Worker
+            component Service
+            component Crypto
+            database Database
+        }
+
+        node FrontendServer {
+            component LoadBalancer
+            component Autoscaler
+            component Endpoint
+            component Crypto
+        }
+
+        FrontendServer -(0- VirtualMachines
+    }
+    
+    FrontendServer -(0- KeyVault
+    VirtualMachines -(0- KeyVault
 }
 
-cloud Vendor_1 {
-    node Server_1 {
-        component PaymentProvider_1
+together {
+    cloud Vendor_1 {
+        node Server_1 {
+            component PaymentProvider_1
+        }
     }
-}
 
-cloud Vendor_2 {
-    node Server_2 {
-        component PaymentProvider_2
+    cloud Vendor_2 {
+        node Server_2 {
+            component PaymentProvider_2
+        }
     }
-}
 
-cloud Vendor_3 {
-    node Server_3 {
-        component PaymentProvider_3
+    cloud Vendor_3 {
+        node Server_3 {
+            component PaymentProvider_3
+        }
     }
-}
-
-frame Clients {
-    frame cl_1 [
-        Client 1
-    ]
-    frame cl_2 [
-        Client 2
-    ]
-    frame cl_n [
-        Client N
-    ]
 }
 
 Clients -(0- FrontendServer
