@@ -44,6 +44,7 @@ class ServiceEndpoint {
 
 
 class LoadBalancer {
+    getAvailable()
     run()
     getWorker()
     releaseWorker()
@@ -69,4 +70,5 @@ LoadBalancer --> "*" Worker : manages >
 ServiceEndpoint --> "1" LoadBalancer: gives work >
 Client "*" -- "1" ServiceEndpoint: < handles requests
 
+hide empty members
 @enduml

@@ -1,0 +1,37 @@
+@startuml seqUc2Nf1
+title Sequence diagram UC2 NF1
+
+
+Client -> ServiceEndpoint: run()
+
+ServiceEndpoint -> LoadBalancer: invokeService()
+Autoscaler -> LoadBalancer: getAvailable()
+return workersCount
+alt workersCount < 0
+    Autoscaler -> Autoscaler: resize()
+    loop n times
+        Autoscaler -> LoadBalancer: createInstance()
+    end
+end
+|||
+
+LoadBalancer -> LoadBalancer: getWorker()
+LoadBalancer -> Worker: process()
+activate Worker
+activate Service
+activate TicketSystem
+
+Worker -> Service: execute()
+Service -> TicketSystem: order(count)
+
+Service <-- TicketSystem: Response
+Worker <-- Service: Response
+return Response
+
+deactivate Worker
+deactivate Service
+deactivate TicketSystem
+
+ServiceEndpoint <-- LoadBalancer: Response
+Client <-- ServiceEndpoint: Response
+@enduml

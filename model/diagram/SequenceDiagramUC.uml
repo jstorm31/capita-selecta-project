@@ -1,0 +1,11 @@
+@startuml
+title Sequence Diagram UC2
+
+Service -> TicketSystem: order(count)
+alt sufficent amount of money
+    TicketSystem --> Service: PDF with tickets
+else insufficent amount of money
+    TicketSystem --> Service: Exception
+end
+
+@enduml
