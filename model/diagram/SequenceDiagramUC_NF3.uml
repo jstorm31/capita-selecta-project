@@ -1,0 +1,18 @@
+@startuml
+title Sequence Diagram UC2 NF3
+
+[-> Service: execute()
+Service -> TicketSystem: order(count)
+TicketSystem -> PaymentProvider: balance(card)
+return balance
+alt balance >= price && ticketsAvailable
+    TicketSystem -> PaymentProvider: pay(card)
+    TicketSystem --> Service: PDF with tickets
+else balance < price
+    TicketSystem --> Service: Exception (low balance)
+else !ticketsAvailable
+    TicketSystem --> Service: Exception (no tickets)
+end
+[<-- Service: Response
+
+@enduml
