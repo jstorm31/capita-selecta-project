@@ -1,0 +1,69 @@
+@startuml "Class diagram"
+left to right direction
+
+together {
+    class TicketSystem {
+        register(request)
+        login(request)
+        order(ticketsCount)
+    }
+
+    class KeyVault {
+        getKey()
+    }
+
+    class Crypto {
+        encrypt(key)
+        decrypt(key)
+    }
+
+    class PaymentProvider {
+        balance(card)
+        pay(card)
+    }
+}
+
+class Service {
+    execute()
+}
+
+class Worker {
+    process()
+    getDC()
+}
+class Client {
+    run()
+}
+
+class ServiceEndpoint {
+    invokeService()
+}
+
+
+class LoadBalancer {
+    run()
+    getWorker()
+    releaseWorker()
+    addWorker()
+    firingWorker()
+}
+
+class Autoscaler {
+    run()
+    resize()
+    createInstance(id)
+}
+
+Service --> "1" TicketSystem: controls >
+TicketSystem --> "3" PaymentProvider
+ServiceEndpoint --> "1" KeyVault
+ServiceEndpoint --> "1" Crypto
+Worker "*" -- "1" Service : invokes >
+Autoscaler --> "1" LoadBalancer : scales >
+TicketSystem --> "1" KeyVault
+TicketSystem --> "1" Crypto
+LoadBalancer --> "*" Worker : manages >
+ServiceEndpoint --> "1" LoadBalancer: gives work >
+Client "*" -- "1" ServiceEndpoint: < handles requests
+
+@enduml
