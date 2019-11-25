@@ -34,6 +34,7 @@ class Simulation(Parameters parameters, Duration clientDeadline) implements Simu
     Int vendorSpeed = fromJust(lookup(parameters, "vendorSpeed"));
     Int batch = fromJust(lookup(parameters, "batch"));
     Int cryptoCost = fromJust(lookup(parameters, "cryptoCost"));
+    Int databaseSpeed = fromJust(lookup(parameters, "databaseSpeed"));
 
     Counter counter;
 
@@ -44,6 +45,7 @@ class Simulation(Parameters parameters, Duration clientDeadline) implements Simu
     Unit start() {
         // Create cloud providers
         CloudProvider cloud = new CloudProvider("Cloud");
+        CloudProvider database = new CloudProvider("Database");
         CloudProvider vendorCloud1 = new CloudProvider("Vendor Cloud 1");
         CloudProvider vendorCloud2 = new CloudProvider("Vendor Cloud 2");
         CloudProvider vendorCloud3 = new CloudProvider("Vendor Cloud 3");
@@ -51,6 +53,7 @@ class Simulation(Parameters parameters, Duration clientDeadline) implements Simu
 
         // Create server machines
         DC frontendServer = await cloud!launchInstance(map[Pair(Speed, workerSpeed * maxWorkersCount)]);
+        DC databaseServer = await cloud!launchInstance(map[Pair(Speed, databaseSpeed)]);
         DC paymentServer1 = await vendorCloud1!launchInstance(map[Pair(Speed, workerSpeed * maxWorkersCount)]);
         DC paymentServer2 = await vendorCloud2!launchInstance(map[Pair(Speed, workerSpeed * maxWorkersCount)]);
         DC paymentServer3 = await vendorCloud3!launchInstance(map[Pair(Speed, workerSpeed * maxWorkersCount)]);
@@ -62,10 +65,11 @@ class Simulation(Parameters parameters, Duration clientDeadline) implements Simu
         List<PaymentProvider> providers = list[prov1, prov2, prov3];
 
         // Deploy the system
+        [DC: databaseServer] Database db = new Database(dbTransactionCost);
         [DC: frontendServer] KeyVault keyVault = new KeyVault();
         [DC: frontendServer] Crypto crypto = new Crypto(cryptoCost);
         [DC: frontendServer] LoadBalancer lb = new RoundRobinLoadBalancer(counter, clientsCount * clientJobsCount);
-        [DC: frontendServer] Autoscaler autoScaler = new Autoscaler(cloud, providers, lb, workersCount, maxWorkersCount, workerSpeed, autoScaleInterval, taskCost, dbTransactionCost, counter, keyVault, crypto);
+        [DC: frontendServer] Autoscaler autoScaler = new Autoscaler(cloud, providers, lb, workersCount, maxWorkersCount, workerSpeed, autoScaleInterval, taskCost, dbTransactionCost, counter, keyVault, crypto, db);
         [DC: frontendServer] ServiceEndpoint endpoint = new ServiceEndpoint(lb, clientDeadline, crypto, keyVault);
     
         println("\n========== Starting " + toString(clientsCount) + " clients... ==========");
@@ -113,19 +117,20 @@ class Simulation(Parameters parameters, Duration clientDeadline) implements Simu
 
 {
     Parameters parameters = map[
-        Pair("workersCount", 128),
-        Pair("maxWorkersCount", 256),
-        Pair("clientsCount", 1000), // Amount of people trying to buy tickets + reserve 20%
+        Pair("workersCount", 256),
+        Pair("maxWorkersCount", 512),
+        Pair("clientsCount", 2000), // Amount of people trying to buy tickets + reserve 20%
         Pair("clientJobsCount", 1),
         Pair("taskCost", 10), // Estimated
+        Pair("databaseSpeed", 6000),
         Pair("dbTransactionCost", 1),
         Pair("workerSpeed", 3000), // Number of requests handled per second by server (estimated for processor with 2 cores with 2GHz frequency)
         Pair("autoScaleInterval", 2), // In time units
         Pair("vendorSpeed", 4), // In time units
-        Pair("batch", 1000),
+        Pair("batch", 5000),
         Pair("cryptoCost", 2)
     ];
-    Duration deadline = Duration(6); // 10 minutes for 6_000_000 clients is 1minute for 600_000 clients
+    Duration deadline = Duration(60); // 10 minutes for 6_000_000 clients is 1minute for 600_000 clients
 
     Simulation simulation = new Simulation(parameters, deadline);
     simulation.start();

@@ -6,7 +6,7 @@
         {
             "label": "Build ABS",
             "type": "shell",
-            "command": "absc --erlang model/*.abs",
+            "command": "absc --erlang ABS/model/*.abs",
             "group": {
                 "kind": "build",
                 "isDefault": true

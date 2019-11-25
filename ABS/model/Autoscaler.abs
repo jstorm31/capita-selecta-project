@@ -13,7 +13,7 @@ import * from Crypto;
 
 interface Autoscaler {}
 
-class Autoscaler(CloudProvider cloud, List<PaymentProvider> providers, LoadBalancer lb, Int nbrOfWorkers, Int maxWorkers, Int nResources, Int cycle, Int taskCost, Int dbTransactionCost, Counter c, KeyVault keyVault, Crypto crypto)
+class Autoscaler(CloudProvider cloud, List<PaymentProvider> providers, LoadBalancer lb, Int nbrOfWorkers, Int maxWorkers, Int nResources, Int cycle, Int taskCost, Int dbTransactionCost, Counter c, KeyVault keyVault, Crypto crypto, Database db)
 implements Autoscaler {
   Unit run(){
     [Cost: 1] skip;
@@ -65,7 +65,6 @@ implements Autoscaler {
     Unit createInstance(Int instanceId) {
       Fut<DC> fs =  cloud!launchInstance(map[Pair(Speed, nResources)]);
       DC vm = fs.get;
-      [DC: vm] Database db = new Database(dbTransactionCost);
       [DC: vm] Service service = new Service(db, providers, taskCost, keyVault, crypto);
       [DC: vm] Worker w = new Worker(service, instanceId);
       await lb!addWorker(w);
