@@ -8,7 +8,7 @@
 import Vapor
 
 final class TicketService: Service {
-    func makeOrder(_ order: OrderRequest, on req: Request) throws -> Future<OrderResponse> {
+    func makeOrder(_ order: OrderRequest, userId: Int, on req: Request) throws -> Future<[Ticket]> {
         let lockQuery = "LOCK \"AvailableTickets\""
         
         return req.transaction(on: .psql) { conn in
@@ -48,15 +48,17 @@ final class TicketService: Service {
                 }
             }
         }
-        .map(to: OrderResponse.self) { _ in
+        .flatMap(to: [Ticket].self) { _ in
             // Generate tickets
-            sleep(1)
-            var tickets = [String]()
+            var tickets = [Ticket]()
             
-            for _ in 0...order.ticketCount {
-                tickets.append(String.random(length: 16))
+            for _ in 0...order.ticketCount - 1 {
+                tickets.append(Ticket(userId: userId))
             }
-            return OrderResponse(tickets: tickets)
+            
+            return tickets.map { ticket in
+                ticket.save(on: req)
+            }.flatten(on: req)
         }
     }
 }

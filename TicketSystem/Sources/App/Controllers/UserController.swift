@@ -21,7 +21,7 @@ final class UserController {
     }
     
     func order(_ req: Request) throws -> Future<OrderResponse> {
-        return try req.content.decode(OrderRequest.self).flatMap(to: OrderRequest.self) { order in
+        return try req.content.decode(OrderRequest.self).flatMap(to: (OrderRequest, Int).self) { order in
             let emailHash = try SHA1.hash(order.email).base64EncodedString()
             
             return User.query(on: req).filter(\.emailHash == emailHash).first()
@@ -37,12 +37,16 @@ final class UserController {
                         throw Abort(.badRequest, reason: "Invalid token")
                     }
                     
-                    return order
+                    return (order, try user.requireID())
             }
         }
-        .flatMap(to: OrderResponse.self ) { order in
+        .flatMap(to: OrderResponse.self ) { arg in
+            let (order, userId) = arg
             let ticketService = try req.make(TicketService.self)
-            return try ticketService.makeOrder(order, on: req)
+            return try ticketService.makeOrder(order, userId: userId, on: req)
+                .map(to: OrderResponse.self) { tickets in
+                    OrderResponse(tickets: try tickets.map { try $0.requireID().uuidString })
+                }
         }
     }
 }
