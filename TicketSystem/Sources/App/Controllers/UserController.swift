@@ -6,14 +6,24 @@ import FluentSQLite
 final class UserController {
     /// Creates a new user.
     func create(_ req: Request) throws -> Future<CreateUserResponse> {
-        // decode request content
-        return try req.content.decode(CreateUserRequest.self).flatMap(to: User.self) { user in
+        let crypto = try req.make(Crypto.self)
+        
+        return try req.content.decode(CreateUserRequest.self).flatMap(to: String.self) { user in
             let hash = try BCrypt.hash(user.password)
-            let token = UUID().uuidString
+            let token = String.random(length: 64)
             
-            return User(email: user.email, token: token, password: hash).save(on: req)
-        }.map(to: CreateUserResponse.self) { user in
-            return CreateUserResponse(token: user.token)
+            let email = try crypto.encrypt(user.email)
+            let encryptedToken = try crypto.encrypt(token)
+            let password = try crypto.encrypt(hash)
+            
+            return User(email: email, token: encryptedToken, password: password).save(on: req).map { user in
+                let decryptedEmail = try crypto.decrypt(user.email)
+                print("Decrypted email: \(decryptedEmail)")
+                
+                return token
+            }
+        }.map(to: CreateUserResponse.self) { token in
+            return CreateUserResponse(token: token)
         }
     }
 }
