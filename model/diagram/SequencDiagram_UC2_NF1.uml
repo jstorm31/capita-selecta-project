@@ -1,6 +1,4 @@
 @startuml seqUc2Nf1
-title Sequence diagram UC2 NF1
-
 
 Client -> ServiceEndpoint: run()
 

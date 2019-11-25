@@ -1,5 +1,4 @@
 @startuml
-title Sequence Diagram UC2 NF3
 
 [-> Service: execute()
 Service -> TicketSystem: order(count)

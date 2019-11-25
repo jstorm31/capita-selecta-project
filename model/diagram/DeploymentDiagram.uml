@@ -1,5 +1,4 @@
 @startuml
-title = Deployment diagram
 
 together {
     frame Clients {
