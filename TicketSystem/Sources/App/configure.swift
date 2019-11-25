@@ -7,7 +7,9 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     // Register providers first
     try services.register(FluentPostgreSQLProvider())
     try services.register(AuthenticationProvider())
+
     services.register(Crypto.self)
+    services.register(TicketService.self)
     
     // Register routes to the router
     let router = EngineRouter.default()
@@ -31,5 +33,6 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     /// Configure migrations
     var migrations = MigrationConfig()
     migrations.add(model: User.self, database: .psql)
+    migrations.add(model: AvailableTickets.self, database: .psql)
     services.register(migrations)
 }

@@ -6,24 +6,43 @@ import FluentSQLite
 final class UserController {
     /// Creates a new user.
     func create(_ req: Request) throws -> Future<CreateUserResponse> {
-        let crypto = try req.make(Crypto.self)
-        
         return try req.content.decode(CreateUserRequest.self).flatMap(to: String.self) { user in
-            let hash = try BCrypt.hash(user.password)
+            let passwordHash = try BCrypt.hash(user.password)
+            let emailHash = try SHA1.hash(user.email).base64EncodedString()
             let token = String.random(length: 64)
             
-            let email = try crypto.encrypt(user.email)
-            let encryptedToken = try crypto.encrypt(token)
-            let password = try crypto.encrypt(hash)
-            
-            return User(email: email, token: encryptedToken, password: password).save(on: req).map { user in
-                let decryptedEmail = try crypto.decrypt(user.email)
-                print("Decrypted email: \(decryptedEmail)")
-                
-                return token
-            }
+            return try User(email: user.email, emailHash: emailHash, token: token, password: passwordHash)
+                .encrypt(on: req)
+                .save(on: req)
+                .map { _ in token }
         }.map(to: CreateUserResponse.self) { token in
             return CreateUserResponse(token: token)
+        }
+    }
+    
+    func order(_ req: Request) throws -> Future<OrderResponse> {
+        return try req.content.decode(OrderRequest.self).flatMap(to: OrderRequest.self) { order in
+            let emailHash = try SHA1.hash(order.email).base64EncodedString()
+            
+            return User.query(on: req).filter(\.emailHash == emailHash).first()
+                // Validate
+                .map { user in
+                    guard let user = user,
+                        let decryptedUser = try? user.decrypt(on: req),
+                        try BCrypt.verify(order.password, created: decryptedUser.password) else {
+                            throw Abort(.badRequest, reason: "Invalid email or password")
+                    }
+                    
+                    guard decryptedUser.token == order.token else {
+                        throw Abort(.badRequest, reason: "Invalid token")
+                    }
+                    
+                    return order
+            }
+        }
+        .flatMap(to: OrderResponse.self ) { order in
+            let ticketService = try req.make(TicketService.self)
+            return try ticketService.makeOrder(order, on: req)
         }
     }
 }
@@ -38,4 +57,15 @@ struct CreateUserRequest: Content {
 
 struct CreateUserResponse: Content {
     let token: String
+}
+
+struct OrderRequest: Content {
+    let email: String
+    let password: String
+    let token: String
+    let ticketCount: Int
+}
+
+struct OrderResponse: Content {
+    let tickets: [String]
 }
