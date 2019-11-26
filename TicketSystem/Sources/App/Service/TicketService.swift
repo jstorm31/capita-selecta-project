@@ -15,23 +15,19 @@ final class TicketService: Service {
             throw Abort(.custom(code: 412, reasonPhrase: "Maximum number of ordered tickets can be \(maxTicketCount)"))
         }
         
-        let lockQuery = "LOCK \"AvailableTickets\""
         let logger = try req.make(PrintLogger.self)
         let userId = try user.requireID()
         
         return req.transaction(on: .psql) { conn in
-            // First lock the table
-            conn.raw(lockQuery).run().flatMap { _ in
-                    // Get tickets count and decrease its value (aka reserve those tickets
-                    AvailableTickets.query(on: conn).first().flatMap(to: Int.self) { availableTickets in
-                        guard let tickets = availableTickets, tickets.count > order.ticketCount else {
-                            throw Abort(.custom(code: 410, reasonPhrase: "No tickets available"))
-                        }
-                        
-                        tickets.count -= order.ticketCount
-                        logger.info("Reserved \(order.ticketCount) tickets for user \(userId)")
-                        return tickets.update(on: conn).map { _ in tickets.count }
+            // Get tickets count and decrease its value (aka reserve those tickets
+            AvailableTickets.query(on: conn).first().flatMap(to: Int.self) { availableTickets in
+                guard let tickets = availableTickets, tickets.count > order.ticketCount else {
+                    throw Abort(.custom(code: 410, reasonPhrase: "No tickets available"))
                 }
+                
+                tickets.count -= order.ticketCount
+                logger.info("Reserved \(order.ticketCount) tickets for user \(userId)")
+                return tickets.update(on: conn).map { _ in tickets.count }
             }
         }
         .flatMap(to: Void.self) { _ in
@@ -48,12 +44,10 @@ final class TicketService: Service {
                 logger.info("Insuficcent balance for user \(userId). Canceling ticket reservation.")
                 // Increase back tickets count
                 return req.transaction(on: .psql) { conn in
-                    conn.raw(lockQuery).run().flatMap { _ in
-                        // Get tickets count and decrease its value (aka reserve those tickets
-                        AvailableTickets.query(on: conn).first().flatMap(to: Void.self) { availableTickets in
-                            availableTickets!.count += order.ticketCount
-                            return availableTickets!.update(on: conn).map { _ in () }
-                        }
+                    // Get tickets count and decrease its value (aka reserve those tickets
+                    AvailableTickets.query(on: conn).first().flatMap(to: Void.self) { availableTickets in
+                        availableTickets!.count += order.ticketCount
+                        return availableTickets!.update(on: conn).map { _ in () }
                     }
                 }
                 .map { _ in
