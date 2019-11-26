@@ -13,12 +13,12 @@ final class AppController: RouteCollection {
     }
     
     /// Creates a new user.
-    func registerHandler(_ req: Request, user: CreateUserRequest) throws -> Future<CreateUserResponse> {
-        let passwordHash = try BCrypt.hash(user.password)
-        let emailHash = try SHA1.hash(user.email).base64EncodedString()
+    func registerHandler(_ req: Request, userRequest: CreateUserRequest) throws -> Future<CreateUserResponse> {
+        let passwordHash = try BCrypt.hash(userRequest.password)
+        let emailHash = try SHA1.hash(userRequest.email).base64EncodedString()
         let token = String.random(length: 64)
         
-        let newUser = User(email: user.email, emailHash: emailHash, token: token, password: passwordHash)
+        let newUser = User(email: userRequest.email, emailHash: emailHash, token: token, password: passwordHash, paymentCardType: userRequest.paymentCardType)
         
         return try newUser.encrypt(on: req).save(on: req).map(to: CreateUserResponse.self) { _ in
             CreateUserResponse(ticketToken: token)
@@ -65,7 +65,7 @@ final class AppController: RouteCollection {
             .flatMap(to: OrderResponse.self) { user in
                 let ticketService = try req.make(TicketService.self)
                 
-                return try ticketService.makeOrder(order, userId: try user.requireID(), on: req)
+                return try ticketService.makeOrder(order, user: user, on: req)
                     .map(to: OrderResponse.self) { tickets in
                         OrderResponse(tickets: try tickets.map { try $0.requireID().uuidString })
                     }
@@ -79,6 +79,7 @@ final class AppController: RouteCollection {
 struct CreateUserRequest: Content {
     var email: String
     var password: String
+    var paymentCardType: PaymentCardType
 }
 
 struct CreateUserResponse: Content {

@@ -8,12 +8,14 @@ final class User: Codable {
     var ticketToken: String
     var password: String
     var accessToken: String?
+    var paymentCardType: PaymentCardType
     
-    init(email: String, emailHash: String? = nil, token: String, password: String) {
+    init(email: String, emailHash: String? = nil, token: String, password: String, paymentCardType: PaymentCardType) {
         self.email = email
         self.emailHash = emailHash
         self.ticketToken = token
         self.password = password
+        self.paymentCardType = paymentCardType
     }
     
     func encrypt(on req: Request) throws -> User {
@@ -33,10 +35,16 @@ final class User: Codable {
         let token = try crypto.decrypt(self.ticketToken)
         let password = try crypto.decrypt(self.password)
         
-        return User(email: email, emailHash: self.emailHash, token: token, password: password)
+        return User(email: email, emailHash: self.emailHash, token: token, password: password, paymentCardType: self.paymentCardType)
     }
 }
 
 extension User: PostgreSQLModel {}
 extension User: Content {}
 extension User: Migration {}
+
+enum PaymentCardType: Int, PostgreSQLRawEnum {
+    case maestro
+    case mastercard
+    case visa
+}

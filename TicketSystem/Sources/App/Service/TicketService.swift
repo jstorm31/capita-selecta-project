@@ -10,12 +10,14 @@ import Vapor
 final class TicketService: Service {
     private let maxTicketCount = 4
     
-    func makeOrder(_ order: OrderRequest, userId: Int, on req: Request) throws -> Future<[Ticket]> {
+    func makeOrder(_ order: OrderRequest, user: User, on req: Request) throws -> Future<[Ticket]> {
         guard order.ticketCount <= maxTicketCount else {
             throw Abort(.custom(code: 412, reasonPhrase: "Maximum number of ordered tickets can be \(maxTicketCount)"))
         }
         
         let lockQuery = "LOCK \"AvailableTickets\""
+        let logger = try req.make(PrintLogger.self)
+        let userId = try user.requireID()
         
         return req.transaction(on: .psql) { conn in
             // First lock the table
@@ -27,18 +29,23 @@ final class TicketService: Service {
                         }
                         
                         tickets.count -= order.ticketCount
+                        logger.info("Reserved \(order.ticketCount) tickets for user \(userId)")
                         return tickets.update(on: conn).map { _ in tickets.count }
                 }
             }
         }
         .flatMap(to: Void.self) { _ in
-            sleep(1) // Check the card balance
+            logger.info("Checking balance for user \(userId) with provider \(user.paymentCardType)")
+            usleep(500000) // Check the card balance
             let sufficentAmount = Double.random(in: 0...1)
             
             if sufficentAmount > 0.1 {
-                sleep(1) // Make payment requests - mock it by waiting for some time
+                logger.info("Sufficcent balance for user \(userId). Paying...")
+                usleep(5000000) // Make payment requests - mock it by waiting for some time
+                logger.info("Successfuly paid for user \(userId)")
                 return req.future(())
             } else {
+                logger.info("Insuficcent balance for user \(userId). Canceling ticket reservation.")
                 // Increase back tickets count
                 return req.transaction(on: .psql) { conn in
                     conn.raw(lockQuery).run().flatMap { _ in
@@ -55,17 +62,18 @@ final class TicketService: Service {
             }
         }
         .flatMap(to: [Ticket].self) { _ in
+            logger.info("Generating tickets for user \(userId)")
+
             // Generate tickets
-            var tickets = [Ticket]()
-            
-            for _ in 0...order.ticketCount - 1 {
-                tickets.append(Ticket(userId: userId))
+            return req.transaction(on: .psql) { conn in
+                var tickets = [Ticket]()
+                
+                for _ in 0...order.ticketCount - 1 {
+                    tickets.append(Ticket(userId: userId))
+                }
+                
+                return tickets.map { $0.save(on: req) }.flatten(on: req)
             }
-            
-            // TODO: make a transaction from this
-            return tickets.map { ticket in
-                ticket.save(on: req)
-            }.flatten(on: req)
         }
     }
 }
