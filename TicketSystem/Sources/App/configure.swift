@@ -1,11 +1,12 @@
-import Authentication
 import FluentPostgreSQL
+import FluentMongo
 import Vapor
 
 /// Called before your application initializes.
 public func configure(_ config: inout Config, _ env: inout Environment, _ services: inout Services) throws {
     // Register providers first
     try services.register(FluentPostgreSQLProvider())
+//    try services.register(FluentMongoProvider())
 
     services.register(Crypto.self)
     services.register(TicketService.self)
@@ -23,9 +24,12 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     services.register(middlewares)
     
     /// Register the configured PostgreSQL database to the database config.
+    let postgresql = PostgreSQLDatabase(config: PostgreSQLDatabaseConfig(hostname: "localhost", username: "ticket_system", database: "ticket_system", password: "ticketpass"))
+    let mongodb = MongoDatabase(config: try MongoDatabaseConfig(user: "ticket_system", password: "ticketpass", host: "localhost", database: "ticket_system"))
+    
     var databases = DatabasesConfig()
-    let postgresql = PostgreSQLDatabase(config: PostgreSQLDatabaseConfig(hostname: "localhost", username: "jstorm31", database: "ticket_system"))
     databases.add(database: postgresql, as: .psql)
+    databases.add(database: mongodb, as: .mongo)
     databases.enableLogging(on: .psql)
     services.register(databases)
     

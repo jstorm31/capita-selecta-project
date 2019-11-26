@@ -1,5 +1,5 @@
 import Crypto
-import FluentSQLite
+import FluentPostgreSQL
 import Vapor
 
 /// Creates new users and logs them in.

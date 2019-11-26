@@ -1,0 +1,40 @@
+version: "3.7"
+
+services:
+  ticket-system:
+    depends_on:
+      - postgres
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - DATABASE_HOSTNAME=postgres
+      - DATABASE_PORT=5432
+
+  postgres:
+    image: "postgres"
+    environment:
+      - POSTGRES_DB=ticket_system
+      - POSTGRES_USER=ticket_system
+      - POSTGRES_PASSWORD=ticketpass
+    ports:
+      - 5432:5432
+
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: pass
+      MONGO_INITDB_DATABASE: admin
+    ports:
+      - 27017:27017
+    volumes:
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+
+  start_dependencies:
+    image: dadarek/wait-for-dependencies
+    depends_on:
+      - postgres
+    command: postgres:5432
