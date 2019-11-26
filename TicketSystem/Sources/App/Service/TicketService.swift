@@ -8,7 +8,13 @@
 import Vapor
 
 final class TicketService: Service {
+    private let maxTicketCount = 4
+    
     func makeOrder(_ order: OrderRequest, userId: Int, on req: Request) throws -> Future<[Ticket]> {
+        guard order.ticketCount <= maxTicketCount else {
+            throw Abort(.custom(code: 412, reasonPhrase: "Maximum number of ordered tickets can be \(maxTicketCount)"))
+        }
+        
         let lockQuery = "LOCK \"AvailableTickets\""
         
         return req.transaction(on: .psql) { conn in
@@ -56,6 +62,7 @@ final class TicketService: Service {
                 tickets.append(Ticket(userId: userId))
             }
             
+            // TODO: make a transaction from this
             return tickets.map { ticket in
                 ticket.save(on: req)
             }.flatten(on: req)

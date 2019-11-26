@@ -5,13 +5,14 @@ final class User: Codable {
     var id: Int?
     var email: String
     var emailHash: String?
-    var token: String
+    var ticketToken: String
     var password: String
+    var accessToken: String?
     
     init(email: String, emailHash: String? = nil, token: String, password: String) {
         self.email = email
         self.emailHash = emailHash
-        self.token = token
+        self.ticketToken = token
         self.password = password
     }
     
@@ -19,7 +20,7 @@ final class User: Codable {
         let crypto = try req.make(Crypto.self)
 
         email = try crypto.encrypt(email)
-        token = try crypto.encrypt(token)
+        ticketToken = try crypto.encrypt(ticketToken)
         password = try crypto.encrypt(password)
         
         return self
@@ -29,7 +30,7 @@ final class User: Codable {
         let crypto = try req.make(Crypto.self)
 
         let email = try crypto.decrypt(self.email)
-        let token = try crypto.decrypt(self.token)
+        let token = try crypto.decrypt(self.ticketToken)
         let password = try crypto.decrypt(self.password)
         
         return User(email: email, emailHash: self.emailHash, token: token, password: password)
