@@ -1,15 +1,18 @@
 version: "3.7"
 
 services:
-  # ticket-system:
-  #   depends_on:
-  #     - postgres
-  #   build: .
-  #   ports:
-  #     - "8080:8080"
-  #   environment:
-  #     - DATABASE_HOSTNAME=postgres
-  #     - DATABASE_PORT=5432
+  ticket-system:
+    depends_on:
+      - postgres-default
+      - postgres-shared
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - DATABASE_HOSTNAME_DEFAULT=postgres-default
+      - DATABASE_HOSTNAME_SHARED=postgres-shared
+      - DATABASE_PORT_DEFAULT=5433
+      - DATABASE_PORT_SHARED=5434
 
   postgres-default:
     image: "postgres"
@@ -17,8 +20,6 @@ services:
       - POSTGRES_DB=ticket_system_default
       - POSTGRES_USER=ticket_system
       - POSTGRES_PASSWORD=ticketpass
-    ports:
-      - "5432:5432"
 
   postgres-shared:
     image: "postgres"
@@ -26,13 +27,12 @@ services:
       - POSTGRES_DB=ticket_system_shared
       - POSTGRES_USER=ticket_system
       - POSTGRES_PASSWORD=ticketpass
-    ports:
-      - "5433:5432"
-
 
   start_dependencies:
     image: dadarek/wait-for-dependencies
     depends_on:
       - postgres-default
       - postgres-shared
-    command: postgres-default:5432
+    command:
+      - postgres-default:5432
+      - postgres-shared:5432

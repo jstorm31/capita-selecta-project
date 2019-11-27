@@ -23,13 +23,27 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     services.register(middlewares)
     
     /// Register the configured PostgreSQL database to the database config.
-    let postgresqlDefault = PostgreSQLDatabase(config: PostgreSQLDatabaseConfig(hostname: "localhost", port: 5432, username: "ticket_system", database: "ticket_system_default", password: "ticketpass"))
-    let postgresqlShared = PostgreSQLDatabase(config: PostgreSQLDatabaseConfig(hostname: "localhost", port: 5433, username: "ticket_system", database: "ticket_system_shared", password: "ticketpass"))
+    
+    let postgresqlDefault = PostgreSQLDatabase(
+        config: PostgreSQLDatabaseConfig(
+            hostname: Environment.get("DATABASE_HOSTNAME_DEFAULT") ?? "postgres-default",
+            username: "ticket_system",
+            database: "ticket_system_default",
+            password: "ticketpass"
+        )
+    )
+    let postgresqlShared = PostgreSQLDatabase(
+        config: PostgreSQLDatabaseConfig(
+            hostname: Environment.get("DATABASE_HOSTNAME_SHARED") ?? "postgres-shared",
+            username: "ticket_system",
+            database: "ticket_system_shared",
+            password: "ticketpass"
+        )
+    )
     
     var databases = DatabasesConfig()
     databases.add(database: postgresqlDefault, as: .init(stringLiteral: "psqlDefault"))
     databases.add(database: postgresqlShared, as: .psql)
-//    databases.enableLogging(on: .psql)
     services.register(databases)
     
     /// Configure migrations
