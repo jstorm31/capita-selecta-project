@@ -20,6 +20,9 @@ final class AppController: RouteCollection {
         
         let newUser = User(email: userRequest.email, emailHash: emailHash, token: token, password: passwordHash, paymentCardType: userRequest.paymentCardType)
         
+        let logger = try req.make(PrintLogger.self)
+        logger.info("Creating user \(newUser.email)")
+        
         return try newUser.encrypt(on: req).save(on: req).map(to: CreateUserResponse.self) { _ in
             CreateUserResponse(ticketToken: token)
         }

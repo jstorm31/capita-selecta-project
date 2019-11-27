@@ -30,7 +30,7 @@ final class Crypto: Service {
     private func getKey() -> String {
         // Key will be stored in a KeyVault service either provided by a cloud provider on own server
         // Now only mock the key request
-        usleep(250000) // 0.25 sec
+//        usleep(250000) // 0.25 sec
         return "7WzXJqpkup0pLiMjW5rBpy1sfaqPyNNB"
     }
 }

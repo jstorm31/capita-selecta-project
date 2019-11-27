@@ -1,2 +1,5 @@
 **/gen
 **/*.dump
+
+jMeter/out
+jMeter/*.log

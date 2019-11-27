@@ -29,7 +29,7 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     var databases = DatabasesConfig()
     databases.add(database: postgresqlDefault, as: .init(stringLiteral: "psqlDefault"))
     databases.add(database: postgresqlShared, as: .psql)
-    databases.enableLogging(on: .psql)
+//    databases.enableLogging(on: .psql)
     services.register(databases)
     
     /// Configure migrations
@@ -37,5 +37,6 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     migrations.add(model: User.self, database: .init(stringLiteral: "psqlDefault"))
     migrations.add(model: Ticket.self, database: .init(stringLiteral: "psqlDefault"))
     migrations.add(model: AvailableTickets.self, database: .psql)
+    migrations.add(migration: AddTicketCount.self, database: .psql)
     services.register(migrations)
 }

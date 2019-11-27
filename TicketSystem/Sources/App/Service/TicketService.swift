@@ -32,12 +32,12 @@ final class TicketService: Service {
         }
         .flatMap(to: Void.self) { _ in
             logger.info("Checking balance for user \(userId) with provider \(user.paymentCardType)")
-            usleep(500000) // Check the card balance
+//            usleep(500000) // Check the card balance
             let sufficentAmount = Double.random(in: 0...1)
             
-            if sufficentAmount > 0.1 {
+            if sufficentAmount > 0.0005 {
                 logger.info("Sufficcent balance for user \(userId). Paying...")
-                usleep(5000000) // Make payment requests - mock it by waiting for some time
+//                usleep(5000000) // Make payment requests - mock it by waiting for some time
                 logger.info("Successfuly paid for user \(userId)")
                 return req.future(())
             } else {
