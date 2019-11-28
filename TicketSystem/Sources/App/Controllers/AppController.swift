@@ -14,6 +14,10 @@ final class AppController: RouteCollection {
     
     /// Creates a new user.
     func registerHandler(_ req: Request, userRequest: CreateUserRequest) throws -> Future<CreateUserResponse> {
+        #if DEBUG
+            sleepLatency()
+        #endif
+        
         let passwordHash = try BCrypt.hash(userRequest.password)
         let emailHash = try SHA1.hash(userRequest.email).base64EncodedString()
         let token = String.random(length: 64)
@@ -30,6 +34,10 @@ final class AppController: RouteCollection {
     
     /// Authenticates a user
     func loginHandler(_ req: Request, loginRequest: LoginRequest) throws -> Future<LoginResponse> {
+        #if DEBUG
+            sleepLatency()
+        #endif
+        
         let emailHash = try SHA1.hash(loginRequest.email).base64EncodedString()
         
         return User.query(on: req).filter(\.emailHash == emailHash).first()
@@ -53,6 +61,10 @@ final class AppController: RouteCollection {
     
     /// Makes tickets order
     func orderHandler(_ req: Request, order: OrderRequest) throws -> Future<OrderResponse> {
+        #if DEBUG
+            sleepLatency()
+        #endif
+        
         guard let bearer = req.http.headers.bearerAuthorization else {
             throw Abort(.unauthorized)
         }
@@ -73,6 +85,29 @@ final class AppController: RouteCollection {
                         OrderResponse(tickets: try tickets.map { try $0.requireID().uuidString })
                     }
             }
+    }
+    
+    /// Sleeps for randomly generated interval to simulate network latency
+    private func sleepLatency() {
+        let x = Float.random(in: 0...1)
+        var latency: Int
+        
+        // Generate latency with probability based on https://www.moesif.com/blog/reports/api-report/Summer-2018-State-of-API-Usage-Report/
+        if x < 0.7 {
+            latency = Int.random(in: 35...500)
+        } else if x < 0.9 {
+            latency = Int.random(in: 501...1000)
+        } else if x < 0.98 {
+            latency = Int.random(in: 1001...3000)
+        } else {
+            latency = Int.random(in: 3001...10000)
+        }
+        
+        // Substract actual work, because latency numbers from the report have work included
+        let workDuration = Int.random(in: 300...700)
+        latency -= latency < workDuration ? latency : workDuration
+        print("📈 Latency: \(latency)ms")
+        usleep(UInt32(1000 * latency))
     }
 }
 

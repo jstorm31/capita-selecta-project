@@ -32,12 +32,13 @@ final class TicketService: Service {
         }
         .flatMap(to: Void.self) { _ in
             logger.info("Checking balance for user \(userId) with provider \(user.paymentCardType)")
-//            usleep(500000) // Check the card balance
-            let sufficentAmount = Double.random(in: 0...1)
+            self.sleepPaymentResponse()
             
+            let sufficentAmount = Double.random(in: 0...1)
             if sufficentAmount > 0.0005 {
                 logger.info("Sufficcent balance for user \(userId). Paying...")
-//                usleep(5000000) // Make payment requests - mock it by waiting for some time
+                self.sleepPaymentResponse() // Check the card balance
+                // Make payment requests - mock it by waiting for some time
                 logger.info("Successfuly paid for user \(userId)")
                 return req.future(())
             } else {
@@ -69,6 +70,25 @@ final class TicketService: Service {
                 return tickets.map { $0.save(on: req) }.flatten(on: req)
             }
         }
+    }
+    
+    private func sleepPaymentResponse() {
+        let x = Float.random(in: 0...1)
+        var latency: Int
+        
+        // Generate latency with probability based on https://www.moesif.com/blog/reports/api-report/Summer-2018-State-of-API-Usage-Report/
+        if x < 0.7 {
+            latency = Int.random(in: 35...500)
+        } else if x < 0.9 {
+            latency = Int.random(in: 501...1000)
+        } else if x < 0.98 {
+            latency = Int.random(in: 1001...2000)
+        } else {
+            latency = Int.random(in: 2001...10000)
+        }
+
+        print("📈 Payment provider latency: \(latency)ms")
+        usleep(UInt32(1000 * latency))
     }
 }
 

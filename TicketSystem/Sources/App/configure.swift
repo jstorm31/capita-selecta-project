@@ -26,7 +26,8 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     
     let postgresqlDefault = PostgreSQLDatabase(
         config: PostgreSQLDatabaseConfig(
-            hostname: Environment.get("DATABASE_HOSTNAME_DEFAULT") ?? "postgres-default",
+            hostname: Environment.get("DATABASE_HOSTNAME_DEFAULT") ?? "localhost",
+            port: 5433,
             username: "ticket_system",
             database: "ticket_system_default",
             password: "ticketpass"
@@ -34,7 +35,8 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     )
     let postgresqlShared = PostgreSQLDatabase(
         config: PostgreSQLDatabaseConfig(
-            hostname: Environment.get("DATABASE_HOSTNAME_SHARED") ?? "postgres-shared",
+            hostname: Environment.get("DATABASE_HOSTNAME_SHARED") ?? "localhost",
+            port: 5434,
             username: "ticket_system",
             database: "ticket_system_shared",
             password: "ticketpass"
