@@ -1,0 +1,30 @@
+@startuml
+
+cloud KeyVault_Cloud {
+    node KeyVault
+}
+
+cloud Payment_providers_cloud {
+    node API
+}
+
+cloud Cloud {
+    frame Backend {
+        node Server_1
+        node Server_2
+        node Server_N
+    }
+    frame DefaultDatabase {
+        database DB_1
+        database DB_2
+        database DB_M
+    }
+    database SharedDatabase
+}
+
+Cloud -(0- KeyVault_Cloud
+Cloud -(0- Payment_providers_cloud
+Backend --> DefaultDatabase
+Backend --> SharedDatabase
+
+@enduml

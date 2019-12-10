@@ -89,25 +89,10 @@ final class AppController: RouteCollection {
     
     /// Sleeps for randomly generated interval to simulate network latency
     private func sleepLatency() {
-        let x = Float.random(in: 0...1)
-        var latency: Int
-        
-        // Generate latency with probability based on https://www.moesif.com/blog/reports/api-report/Summer-2018-State-of-API-Usage-Report/
-        if x < 0.7 {
-            latency = Int.random(in: 35...500)
-        } else if x < 0.9 {
-            latency = Int.random(in: 501...1000)
-        } else if x < 0.98 {
-            latency = Int.random(in: 1001...3000)
-        } else {
-            latency = Int.random(in: 3001...10000)
-        }
-        
-        // Substract actual work, because latency numbers from the report have work included
-        let workDuration = Int.random(in: 300...700)
-        latency -= latency < workDuration ? latency : workDuration
+        // Generate latency for Google Cloud servers (based on https://geekflare.com/google-cloud-latency)
+        let latency = Int.random(in: 25...400)
         print("📈 Latency: \(latency)ms")
-        usleep(UInt32(1000 * latency))
+        usleep(UInt32(latency))
     }
 }
 

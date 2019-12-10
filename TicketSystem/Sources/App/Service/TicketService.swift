@@ -42,7 +42,7 @@ final class TicketService: Service {
                 logger.info("Successfuly paid for user \(userId)")
                 return req.future(())
             } else {
-                logger.info("Insuficcent balance for user \(userId). Canceling ticket reservation.")
+                logger.info("Insuficcent balance for user \(userId). Cancelling ticket reservation.")
                 // Increase back tickets count
                 return req.transaction(on: .psql) { conn in
                     // Get tickets count and decrease its value (aka reserve those tickets
@@ -67,7 +67,10 @@ final class TicketService: Service {
                     tickets.append(Ticket(userId: userId))
                 }
                 
-                return tickets.map { $0.save(on: req) }.flatten(on: req)
+                return try tickets.map { ticket in
+                    try ticket.encrypt(on: req).save(on: req).map { try $0.decrypt(on: req) }
+                }
+                .flatten(on: req)
             }
         }
     }
@@ -76,15 +79,16 @@ final class TicketService: Service {
         let x = Float.random(in: 0...1)
         var latency: Int
         
-        // Generate latency with probability based on https://www.moesif.com/blog/reports/api-report/Summer-2018-State-of-API-Usage-Report/
-        if x < 0.7 {
-            latency = Int.random(in: 35...500)
+        // Assumption bounded by SLA with payemtn provider - response time max. 1500 ms with 98% probability
+        // Distribution of the latency is exponentional (based on https://www.moesif.com/blog/reports/api-report/Summer-2018-State-of-API-Usage-Report/)
+        if x < 0.4 {
+            latency = Int.random(in: 25...500)
         } else if x < 0.9 {
-            latency = Int.random(in: 501...1000)
+            latency = Int.random(in: 501...2000)
         } else if x < 0.98 {
-            latency = Int.random(in: 1001...2000)
+            latency = Int.random(in: 2001...2500)
         } else {
-            latency = Int.random(in: 2001...10000)
+            latency = Int.random(in: 2501...5000)
         }
 
         print("📈 Payment provider latency: \(latency)ms")

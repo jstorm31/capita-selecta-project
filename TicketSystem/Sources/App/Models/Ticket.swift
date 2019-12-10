@@ -10,9 +10,25 @@ import Vapor
 
 final class Ticket: PostgreSQLUUIDModel, Migration, Content {
     var id: UUID?
-    var userId: Int
+    var userId: String
+    var intUserId: Int {
+        return Int(userId)!
+    }
     
     init(userId: Int) {
-        self.userId = userId
+        self.userId = String(userId)
+    }
+    
+    func encrypt(on req: Request) throws -> Ticket {
+        let crypto = try req.make(Crypto.self)
+        userId = try crypto.encrypt(String(userId))
+        return self
+    }
+    
+    func decrypt(on req: Request) throws -> Ticket {
+        let crypto = try req.make(Crypto.self)
+        let stringUserId = try crypto.decrypt(String(self.userId))
+        self.userId = stringUserId
+        return self
     }
 }

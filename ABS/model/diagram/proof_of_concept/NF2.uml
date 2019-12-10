@@ -1,0 +1,13 @@
+@startuml
+    [-> AppController: POST /api/order
+    AppController -> TicketService: makeOrder(order)
+    loop order.ticketsCount
+        create Ticket
+        TicketService -> Ticket: new
+        Ticket -> Ticket: encrypt
+        Ticket -> Ticket: save
+        Ticket -> TicketService: ticket
+    end
+    TicketService -> AppController: tickets
+    [<- AppController: JSON: {tickets: [...]}
+@enduml
