@@ -6,6 +6,7 @@
 //
 
 import Vapor
+import GameKit
 
 final class TicketService: Service {
     private let maxTicketCount = 4
@@ -18,9 +19,14 @@ final class TicketService: Service {
         let logger = try req.make(PrintLogger.self)
         let userId = try user.requireID()
         
-        return req.transaction(on: .psql) { conn in
+        // Shared DB transaction
+        return req.transaction(on: .psql) { conn -> EventLoopFuture<Int> in
+            #if DEBUG
+                self.dbLatency()
+            #endif
+            
             // Get tickets count and decrease its value (aka reserve those tickets
-            AvailableTickets.query(on: conn).first().flatMap(to: Int.self) { availableTickets in
+            return AvailableTickets.query(on: conn).first().flatMap(to: Int.self) { availableTickets in
                 guard let tickets = availableTickets, tickets.count > order.ticketCount else {
                     throw Abort(.custom(code: 410, reasonPhrase: "No tickets available"))
                 }
@@ -30,6 +36,8 @@ final class TicketService: Service {
                 return tickets.update(on: conn).map { _ in tickets.count }
             }
         }
+            
+        // Payment transaction
         .flatMap(to: Void.self) { _ in
             logger.info("Checking balance for user \(userId) with provider \(user.paymentCardType)")
             self.sleepPaymentResponse()
@@ -56,10 +64,15 @@ final class TicketService: Service {
                 }
             }
         }
+            
+        // Generate tickets
         .flatMap(to: [Ticket].self) { _ in
             logger.info("Generating tickets for user \(userId)")
+            
+            #if DEBUG
+                self.dbLatency()
+            #endif
 
-            // Generate tickets
             return req.transaction(on: .psql) { conn in
                 var tickets = [Ticket]()
                 
@@ -82,7 +95,7 @@ final class TicketService: Service {
         // Assumption bounded by SLA with payemtn provider - response time max. 1500 ms with 98% probability
         // Distribution of the latency is exponentional (based on https://www.moesif.com/blog/reports/api-report/Summer-2018-State-of-API-Usage-Report/)
         if x < 0.4 {
-            latency = Int.random(in: 25...500)
+            latency = Int.random(in: 35...500)
         } else if x < 0.9 {
             latency = Int.random(in: 501...2000)
         } else if x < 0.98 {
@@ -93,6 +106,11 @@ final class TicketService: Service {
 
         print("📈 Payment provider latency: \(latency)ms")
         usleep(UInt32(1000 * latency))
+    }
+    
+    private func dbLatency() {
+        let responseTime = Int.random(in: 35...400)
+        usleep(UInt32(1000 * responseTime))
     }
 }
 

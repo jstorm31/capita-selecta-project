@@ -1,0 +1,16 @@
+@startuml
+    [-> AppController: POST /api/order
+    AppController -> TicketService: makeOrder(order, user)
+    TicketService -> TicketService: getAvailableTickets()
+    TicketService -> TicketService: checkBalance(user.card)
+    alt balance >= price && ticketsAvailable == true
+        TicketService ->] : pay(user.card)
+        TicketService <--] : paid
+        TicketService --> AppController: tickets
+    else balance >= price && ticketsAvailable == false
+        TicketService --> AppController: Exception (no tickets)
+    else balance < price
+        TicketService --> AppController: Exception (low balance)
+    end
+    [<- AppController: JSON: {tickets: [...]}
+@enduml

@@ -31,7 +31,7 @@ final class Crypto: Service {
         // Key will be stored in a KeyVault service either provided by a cloud provider on own server
         // Now only mock the key request
         let responseTime = Int.random(in: 35...400)
-        usleep(UInt32(responseTime)) // 0.25 sec
+        usleep(UInt32(responseTime * 1000))
         return "7WzXJqpkup0pLiMjW5rBpy1sfaqPyNNB"
     }
 }
