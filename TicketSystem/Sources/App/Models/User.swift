@@ -47,4 +47,18 @@ enum PaymentCardType: Int, PostgreSQLRawEnum {
     case maestro
     case mastercard
     case visa
+    
+    static func delay(_ type: Self) -> Int {
+        switch type {
+        case .maestro:
+            // Slow
+            return Int.random(in: 2500...5000)
+        case .mastercard:
+            // Medium
+            return Int.random(in: 1500...3500)
+        case .visa:
+            // Fast
+            return Int.random(in: 500...2500)
+        }
+    }
 }

@@ -14,17 +14,23 @@ cloud Cloud {
         node Server_2
         node Server_N
     }
-    frame DefaultDatabase {
-        database DB_1
-        database DB_2
-        database DB_M
+    frame UserDatabase {
+        database DB_User_shard_1
+        database DB_User_shard_2
+        database DB_User_shard_3
+        database DB_User_shard_4
     }
-    database SharedDatabase
+    frame TicketDatabase {
+        database DB_Ticket_shard_1
+        database DB_Ticket_shard_2
+        database DB_Ticket_shard_3
+        database DB_Ticket_shard_4
+    }
 }
 
 Cloud -(0- KeyVault_Cloud
 Cloud -(0- Payment_providers_cloud
-Backend --> DefaultDatabase
-Backend --> SharedDatabase
+Backend --> UserDatabase
+Backend --> TicketDatabase
 
 @enduml

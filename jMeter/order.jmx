@@ -18,11 +18,11 @@
           <boolProp name="LoopController.continue_forever">false</boolProp>
           <stringProp name="LoopController.loops">1</stringProp>
         </elementProp>
-        <stringProp name="ThreadGroup.num_threads">200</stringProp>
+        <stringProp name="ThreadGroup.num_threads">1000</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
         <boolProp name="ThreadGroup.scheduler">true</boolProp>
         <stringProp name="ThreadGroup.duration">900</stringProp>
-        <stringProp name="ThreadGroup.delay">0.2</stringProp>
+        <stringProp name="ThreadGroup.delay">0.3</stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">false</boolProp>
         <boolProp name="ThreadGroup.delayedStart">true</boolProp>
       </ThreadGroup>
@@ -64,7 +64,7 @@
               </elementProp>
               <elementProp name="" elementType="Header">
                 <stringProp name="Header.name">Authorization</stringProp>
-                <stringProp name="Header.value">Bearer eX4PRubQ8JKETZZ96WRxmya5o0BY2aBe</stringProp>
+                <stringProp name="Header.value">Bearer g7OFU02Jvcq5G11QFNM6ARPbST36r3gt</stringProp>
               </elementProp>
             </collectionProp>
           </HeaderManager>
